@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"shared/constants"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ var client *mongo.Client = nil
 const databaseInitializationTimeout = 10 * time.Second
 const databaseName = "main"
 const userCollectionName = "Users"
+const refreshTokenCollectionName = "RefreshTokens"
 
 /*
 Initialize the database connection.
@@ -52,11 +54,19 @@ func InitializeDBConnection(dbUrl string) {
 }
 
 /*
-Returns the user collection along with its context
+Returns the user collection
 */
 func GetUserCollection() mongo.Collection {
 	return *(client.Database(databaseName).
 		Collection(userCollectionName))
+}
+
+/*
+Returns the refresh token collection
+*/
+func GetRefreshTokenCollection() mongo.Collection {
+	return *(client.Database(databaseName).
+		Collection(refreshTokenCollectionName))
 }
 
 /*
@@ -83,8 +93,17 @@ func cleanupDBConnectionOnExit() {
 /*
 Sets up the indices on the table if they don't yet exist
 - db.users.createIndex( { "email": 1 }, { unique: true } )
+- db.RefreshTokens.createIndex( expireAfterSeconds: constants.RefreshTokenExpirySeconds } )
 */
 func setupIndices() {
+	createUserIndices()
+	createRefreshTokenIndices()
+}
+
+/*
+Creates user index: db.users.createIndex( { "email": 1 }, { unique: true } )
+*/
+func createUserIndices() {
 	// Define index
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{
@@ -98,6 +117,31 @@ func setupIndices() {
 	defer cancel()
 	// Add index to user collection
 	col := GetUserCollection()
+	_, err := col.Indexes().CreateOne(ctx, indexModel)
+	// Fail if error occurred
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+/*
+Creates refresh token index:
+- db.RefreshTokens.createIndex( expireAfterSeconds: constants.RefreshTokenExpirySeconds } )
+*/
+func createRefreshTokenIndices() {
+	// Define index
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"createdAt": 1,
+		},
+		Options: options.Index().SetExpireAfterSeconds(constants.RefreshTokenExpirySeconds),
+	}
+	// Create context
+	ctx, cancel := context.WithTimeout(context.Background(),
+		databaseInitializationTimeout)
+	defer cancel()
+	// Add index to refresh token collection
+	col := GetRefreshTokenCollection()
 	_, err := col.Indexes().CreateOne(ctx, indexModel)
 	// Fail if error occurred
 	if err != nil {
