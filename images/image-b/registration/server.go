@@ -50,7 +50,8 @@ func registerEndpoint(c *fiber.Ctx) error {
 
 func main() {
 	loadDevEnv()
-	persistence.InitializeDBConnection()
+	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"),
+		os.Getenv("DB_NAME"))
 	app := fiber.New()
 	app.Post("/api/register", registerEndpoint)
 	log.Fatal(app.Listen(":" + os.Getenv("PORT")))

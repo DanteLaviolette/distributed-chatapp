@@ -11,27 +11,27 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/joho/godotenv"
 )
 
 var client *mongo.Client = nil
 var ctx context.Context
 var ctxCancel context.CancelFunc
+var databaseName string
 
 /*
 Initialize the database connection.
+dbUrl: Database url to connect to
+dbName: Database name to connect to
 */
-func InitializeDBConnection() {
+func InitializeDBConnection(dbUrl string, dbName string) {
 	// Only initialize client if not set (singleton pattern)
 	if client == nil {
-		// Load .env file if not prod
-		loadDevEnv()
+		databaseName = dbName
 		// Create context
 		ctx, ctxCancel = context.WithTimeout(context.Background(), 10*time.Second)
 		// Connect to mongoDB
 		var err error
-		client, err = mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGODB_URL")))
+		client, err = mongo.Connect(ctx, options.Client().ApplyURI(dbUrl))
 		// Fail if connection error occurred
 		if err != nil {
 			log.Fatal(err)
@@ -54,8 +54,8 @@ func InitializeDBConnection() {
 Returns the user collection along with its context
 */
 func GetUserCollection() (mongo.Collection, context.Context) {
-	return *(client.Database(os.Getenv("DB_NAME")).
-		Collection(os.Getenv("USER_COLLECTION_NAME"))), ctx
+	return *(client.Database(databaseName).
+		Collection("Users")), ctx
 }
 
 /*
@@ -94,19 +94,5 @@ func setupIndices() {
 	// Fail if error occurred
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-/*
-Load dev environment from .env if os.Getenv('GO_ENV') != 'prod'
-*/
-func loadDevEnv() {
-	// Get dev env if not prod
-	if os.Getenv("GO_ENV") != "prod" {
-		// Load .env file
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
-		}
 	}
 }
