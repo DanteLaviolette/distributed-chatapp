@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"registration/business"
+	"registration/persistence"
 	"registration/structs"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,6 +48,7 @@ func registerEndpoint(c *fiber.Ctx) error {
 
 func main() {
 	loadDevEnv()
+	persistence.InitializeDBConnection()
 	app := fiber.New()
 	app.Post("/api/register", registerEndpoint)
 	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
