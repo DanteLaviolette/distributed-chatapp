@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"registration/business"
-	"registration/structs"
 	"shared/persistence"
+	"shared/structs"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -30,14 +30,16 @@ func loadDevEnv() {
 
 /*
 Registration endpoint -- attempts to register user
-Accepts a POST request containing RegisterInfo as JSON.
+Accepts a POST request containing User as JSON.
 Returns:
-- 400 if request is invalid (bad content type, bad method or invalid JSON)
--
+- 200 upon success
+- 400 if any fields are empty or request is invalid
+- 409 if email already exists
+- 500 error code if unexpected error occurs
 */
 func registerEndpoint(c *fiber.Ctx) error {
 	// Parse body to struct
-	var registerInfo structs.RegisterInfo
+	var registerInfo structs.User
 	if err := c.BodyParser(&registerInfo); err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}

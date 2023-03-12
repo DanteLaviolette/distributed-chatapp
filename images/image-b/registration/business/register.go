@@ -3,7 +3,7 @@ package business
 import (
 	"net/http"
 	"registration/persistence"
-	"registration/structs"
+	"shared/structs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -14,24 +14,28 @@ const missingFieldsError = "Fields can't be empty"
 const duplicateKeyError = "Email already exists"
 
 /*
-Registers the user if possible based on registerInfo. Returns the response
+Registers the user if possible based on User. Returns the response
 message and response code.
+- 200 upon success
+- 400 if any fields are empty
+- 409 if email already exists
+- 500 error code if unexpected error occurs
 */
-func RegisterUser(registerInfo structs.RegisterInfo) (string, int) {
+func RegisterUser(user structs.User) (string, int) {
 	// Fail if fields are missing
-	if registerInfo.FirstName == "" || registerInfo.LastName == "" ||
-		registerInfo.Email == "" || registerInfo.Password == "" {
+	if user.FirstName == "" || user.LastName == "" ||
+		user.Email == "" || user.Password == "" {
 		return missingFieldsError, http.StatusBadRequest
 	}
 	// Hash password
-	hash, err := getPasswordHash(registerInfo.Password)
+	hash, err := getPasswordHash(user.Password)
 	if err != nil {
 		return internalServerError, http.StatusInternalServerError
 	}
 	// Set password to the hashed password
-	registerInfo.Password = hash
+	user.Password = hash
 	// Attempt to register user
-	err = persistence.InsertUser(registerInfo)
+	err = persistence.InsertUser(user)
 	// Fail if error ocurred (dupe key error means email already exists)
 	if mongo.IsDuplicateKeyError(err) {
 		return duplicateKeyError, http.StatusConflict
