@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -20,13 +21,6 @@ var ctxCancel context.CancelFunc
 Initialize the database connection.
 */
 func InitializeDBConnection() {
-	getClientSingleton()
-}
-
-/*
-Returns a MongoDB client as a singleton.
-*/
-func getClientSingleton() mongo.Client {
 	// Only initialize client if not set (singleton pattern)
 	if client == nil {
 		// Create context
@@ -47,8 +41,9 @@ func getClientSingleton() mongo.Client {
 		log.Printf("Connected to MongoDB")
 		// Handle cleanup on exit
 		cleanupDBConnectionOnExit()
+		// Setup indices
+		setupIndices()
 	}
-	return *client
 }
 
 /*
@@ -67,4 +62,33 @@ func cleanupDBConnectionOnExit() {
 		ctxCancel()
 		os.Exit(0)
 	}()
+}
+
+/*
+Sets up the indices on the table if they don't yet exist
+- db.users.createIndex( { "email": 1 }, { unique: true } )
+*/
+func setupIndices() {
+	// Define index
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"email": 1, // index in ascending order
+		},
+		Options: options.Index().SetUnique(true),
+	}
+	// Add index to user collection
+	col, _ := getUserCollection()
+	_, err := col.Indexes().CreateOne(ctx, indexModel)
+	// Fail if error occurred
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+/*
+Returns the user collection along with its context
+*/
+func getUserCollection() (mongo.Collection, context.Context) {
+	return *(client.Database(os.Getenv("DB_NAME")).
+		Collection(os.Getenv("USER_COLLECTION_NAME"))), ctx
 }
