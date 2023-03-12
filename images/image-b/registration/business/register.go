@@ -1,9 +1,8 @@
-package register
+package business
 
 import (
-	"fmt"
 	"net/http"
-	"structs"
+	"registration/structs"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,20 +13,21 @@ message and response code.
 */
 func RegisterUser(registerInfo structs.RegisterInfo) (string, int) {
 	// Fail if fields are missing
-	if registerInfo.Username == "" || registerInfo.FirstName == "" ||
-		registerInfo.LastName == "" || registerInfo.Email == "" ||
-		registerInfo.Password == "" {
+	if registerInfo.FirstName == "" || registerInfo.LastName == "" ||
+		registerInfo.Email == "" || registerInfo.Password == "" {
 		return "Missing fields", http.StatusBadRequest
 	}
 	// Hash password
-	hash, err := getPasswordHash(registerInfo.password)
+	hash, err := getPasswordHash(registerInfo.Password)
 	if err != nil {
 		return "", http.StatusInternalServerError
 	}
-	fmt.Printf("%s", hash)
 	// Attempt to register user
+
+	return "", 200
 }
 
 func getPasswordHash(password string) (string, error) {
-	return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	res, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(res), err
 }
