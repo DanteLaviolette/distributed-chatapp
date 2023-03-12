@@ -14,21 +14,22 @@ import (
 )
 
 var client *mongo.Client = nil
-var ctx context.Context
-var ctxCancel context.CancelFunc
-var databaseName string
+
+const databaseInitializationTimeout = 10 * time.Second
+const databaseName = "main"
+const userCollectionName = "Users"
 
 /*
 Initialize the database connection.
 dbUrl: Database url to connect to
-dbName: Database name to connect to
 */
-func InitializeDBConnection(dbUrl string, dbName string) {
+func InitializeDBConnection(dbUrl string) {
 	// Only initialize client if not set (singleton pattern)
 	if client == nil {
-		databaseName = dbName
 		// Create context
-		ctx, ctxCancel = context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(),
+			databaseInitializationTimeout)
+		defer cancel()
 		// Connect to mongoDB
 		var err error
 		client, err = mongo.Connect(ctx, options.Client().ApplyURI(dbUrl))
@@ -53,9 +54,9 @@ func InitializeDBConnection(dbUrl string, dbName string) {
 /*
 Returns the user collection along with its context
 */
-func GetUserCollection() (mongo.Collection, context.Context) {
+func GetUserCollection() mongo.Collection {
 	return *(client.Database(databaseName).
-		Collection("Users")), ctx
+		Collection(userCollectionName))
 }
 
 /*
@@ -68,10 +69,13 @@ func cleanupDBConnectionOnExit() {
 	// Run exit func in background waiting for exit signal
 	go func() {
 		<-sigs
+		// Create context
+		ctx, cancel := context.WithTimeout(context.Background(),
+			databaseInitializationTimeout)
 		// Disconnect client
 		client.Disconnect(ctx)
 		// Cleanup context
-		ctxCancel()
+		cancel()
 		os.Exit(0)
 	}()
 }
@@ -88,8 +92,12 @@ func setupIndices() {
 		},
 		Options: options.Index().SetUnique(true),
 	}
+	// Create context
+	ctx, cancel := context.WithTimeout(context.Background(),
+		databaseInitializationTimeout)
+	defer cancel()
 	// Add index to user collection
-	col, _ := GetUserCollection()
+	col := GetUserCollection()
 	_, err := col.Indexes().CreateOne(ctx, indexModel)
 	// Fail if error occurred
 	if err != nil {
