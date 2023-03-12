@@ -35,4 +35,7 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
+	shared v0.0.0-00010101000000-000000000000 // indirect
 )
+
+replace shared => ../../shared

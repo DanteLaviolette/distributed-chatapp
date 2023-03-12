@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"registration/business"
-	"registration/persistence"
 	"registration/structs"
+	"shared/persistence"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
