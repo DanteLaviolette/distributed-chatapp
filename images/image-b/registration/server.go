@@ -53,7 +53,7 @@ func registerEndpoint(c *fiber.Ctx) error {
 Changes the user password. Returns:
 - 200 on success
 - 400 on bad request (ie. invalid password or request)
-- 403 if not signed in
+- 401 if not signed in
 - 500 if an error occurs
 */
 func changePasswordEndpoint(c *fiber.Ctx) error {

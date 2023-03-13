@@ -55,7 +55,7 @@ func loginEndpoint(c *fiber.Ctx) error {
 
 /*
 Logs the user out. Returns:
-- 409 if not signed in
+- 401 if not signed in
 - 200 otherwise
 */
 func logoutEndpoint(c *fiber.Ctx) error {
