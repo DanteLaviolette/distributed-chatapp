@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
 
@@ -134,6 +135,7 @@ func createAuthCookie(email string, name string, id string, key string) *fiber.C
 	// Sign token
 	signedToken, err := token.SignedString([]byte(key))
 	if err != nil {
+		log.Print(err)
 		return nil
 	}
 	// Return cookie w/ jwt
@@ -172,6 +174,7 @@ func createRefreshCookie(userId string, key string) *fiber.Cookie {
 	// Sign token
 	signedToken, err := token.SignedString([]byte(key))
 	if err != nil {
+		log.Print(err)
 		return nil
 	}
 	// Return cookie w/ JWT
@@ -193,7 +196,7 @@ Returns (secret, id, err)
 func generateAndPrepareRefreshSecret(userId string) (string, string, error) {
 	secret, hashedSecret, err := generateSecret()
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 	// Write secret to db
 	id, err := persistence.WriteRefreshToken(structs.RefreshToken{
@@ -201,7 +204,7 @@ func generateAndPrepareRefreshSecret(userId string) (string, string, error) {
 		UserId: userId,
 	})
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 	return secret, id, nil
 }
@@ -298,6 +301,7 @@ Returns true if the token is successfully used, false otherwise.
 func useRefreshToken(userId string, refreshId string, refreshSecret string) bool {
 	refreshSecretHashed, err := persistence.GetAndDeleteRefreshTokenSecret(userId, refreshId)
 	if err != nil {
+		log.Print(err)
 		return false
 	}
 	// Validate refresh secret
