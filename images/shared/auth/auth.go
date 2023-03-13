@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"math/big"
+	"net/http"
 
 	"shared/constants"
 	"shared/persistence"
@@ -15,12 +16,65 @@ import (
 )
 
 const SECRET_LENGTH = 32
+const AUTH_COOKIE_NAME = "auth"
+const REFRESH_COOKIE_NAME = "refresh"
+
+type AuthProvider struct {
+	/*
+		Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
+		Returns nil if an error occurs.
+	*/
+	CreateAuthCookie func(structs.UserWithId) *fiber.Cookie
+	/*
+		Given a user & key returns a JWT refresh token signed by the key as a fiber cookie.
+		Returns nil if an error occurs.
+		Note:
+		- Also writes a secret to the DB to validate the refresh token later.
+	*/
+	CreateRefreshCookie func(structs.UserWithId) *fiber.Cookie
+	/*
+		To be used as fiber middleware. Proceeds if user is logged in (potentially
+		refreshing their credentials). Fails the request with 401 error if not logged
+		in.
+	*/
+	IsAuthenticatedFiberMiddleware func(*fiber.Ctx)
+}
+
+func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
+	return &AuthProvider{
+		CreateAuthCookie: func(user structs.UserWithId) *fiber.Cookie {
+			return createAuthCookie(user, authPrivateKey)
+		},
+		CreateRefreshCookie: func(user structs.UserWithId) *fiber.Cookie {
+			return createRefreshCookie(user, refreshPrivateKey)
+		},
+		IsAuthenticatedFiberMiddleware: func(c *fiber.Ctx) {
+			isAuthenticatedFiberMiddleware(c, authPrivateKey, refreshPrivateKey)
+		},
+	}
+}
+
+/*
+To be used as fiber middleware. Proceeds if user is logged in (potentially
+refreshing their credentials). Fails the request with 401 error if not logged
+in.
+*/
+func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
+	refreshPrivateKey string) {
+	auth := c.Cookies(AUTH_COOKIE_NAME)
+	refresh := c.Cookies(REFRESH_COOKIE_NAME)
+	if auth == "" || refresh == "" {
+		c.SendStatus(http.StatusUnauthorized)
+	}
+	// Validate auth token
+	//jwt.Parse(auth)
+}
 
 /*
 Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
 Returns nil if an error occurs.
 */
-func CreateAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
+func createAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	// Create token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
@@ -36,7 +90,7 @@ func CreateAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	}
 	// Return cookie w/ jwt
 	return &fiber.Cookie{
-		Name:     "auth",
+		Name:     AUTH_COOKIE_NAME,
 		Value:    signedToken,
 		HTTPOnly: false,
 		SameSite: "strict",
@@ -50,7 +104,7 @@ Returns nil if an error occurs.
 Note:
 - Also writes a secret to the DB to validate the refresh token later.
 */
-func CreateRefreshCookie(user structs.UserWithId, key string) *fiber.Cookie {
+func createRefreshCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	refreshSecret, secretId, err := generateAndPrepareRefreshSecret(user.ID.Hex())
 	if err != nil {
 		return nil
@@ -70,7 +124,7 @@ func CreateRefreshCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	}
 	// Return cookie w/ JWT
 	return &fiber.Cookie{
-		Name:     "refresh",
+		Name:     REFRESH_COOKIE_NAME,
 		Value:    signedToken,
 		HTTPOnly: true,
 		SameSite: "strict",

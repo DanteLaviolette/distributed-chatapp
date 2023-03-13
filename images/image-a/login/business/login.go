@@ -1,7 +1,6 @@
 package business
 
 import (
-	"log"
 	"login/persistence"
 	"net/http"
 	"os"
@@ -14,7 +13,6 @@ import (
 
 func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
 	user, err := persistence.GetUserWithId(loginInfo.Email)
-	log.Print(user)
 	// User not found case
 	if err != nil {
 		return nil, nil, http.StatusBadRequest
@@ -24,8 +22,10 @@ func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
 		return nil, nil, http.StatusBadRequest
 	}
 	// Password is valid & user was found, generate auth & refresh token
-	authToken := auth.CreateAuthCookie(user, os.Getenv("AUTH_PRIVATE_KEY"))
-	refreshToken := auth.CreateRefreshCookie(user, os.Getenv("REFRESH_PRIVATE_KEY"))
+	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
+		os.Getenv("REFRESH_PRIVATE_KEY"))
+	authToken := authProvider.CreateAuthCookie(user)
+	refreshToken := authProvider.CreateRefreshCookie(user)
 	if authToken == nil || refreshToken == nil {
 		return nil, nil, http.StatusInternalServerError
 	}
