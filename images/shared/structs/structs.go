@@ -28,6 +28,11 @@ type LoginRequest struct {
 	Password string
 }
 
+// Data type representing change password request
+type ChangePasswordRequest struct {
+	Password string
+}
+
 // Refresh token for writing to db
 type RefreshToken struct {
 	UserId string

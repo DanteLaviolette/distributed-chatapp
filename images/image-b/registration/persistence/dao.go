@@ -5,6 +5,9 @@ import (
 	"shared/constants"
 	"shared/persistence"
 	"shared/structs"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 /*
@@ -17,5 +20,24 @@ func InsertUser(user structs.User) error {
 	defer cancel()
 	collection := persistence.GetUserCollection()
 	_, err := collection.InsertOne(ctx, user)
+	return err
+}
+
+/*
+Updates the password for the given userId. Returns nil upon success, error otherwise.
+*/
+func UpdatePasswordForUserId(userId string, passwordHash string) error {
+	id, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	collection := persistence.GetUserCollection()
+	_, err = collection.UpdateOne(ctx, bson.M{
+		"_id": id,
+	}, bson.M{
+		"$set": bson.M{"password": passwordHash},
+	})
 	return err
 }
