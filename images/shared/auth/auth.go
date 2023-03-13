@@ -2,6 +2,8 @@ package auth
 
 import (
 	"crypto/rand"
+	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 
@@ -21,35 +23,37 @@ const REFRESH_COOKIE_NAME = "refresh"
 
 type AuthProvider struct {
 	/*
-		Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
-		Returns nil if an error occurs.
+	   Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
+	   Returns nil if an error occurs.
+	   JWT Cookie contains the fields id, email, name, iat & exp.
 	*/
 	CreateAuthCookie func(structs.UserWithId) *fiber.Cookie
 	/*
-		Given a user & key returns a JWT refresh token signed by the key as a fiber cookie.
-		Returns nil if an error occurs.
-		Note:
-		- Also writes a secret to the DB to validate the refresh token later.
+	   Given a user & key returns a JWT refresh token signed by the key as a fiber cookie.
+	   Returns nil if an error occurs.
+	   Note: Also writes a hashed secret to the DB to validate the refresh token later.
+	   JWT Cookie contains the fields userId, secret, secretId, iat & exp.
 	*/
 	CreateRefreshCookie func(structs.UserWithId) *fiber.Cookie
 	/*
 		To be used as fiber middleware. Proceeds if user is logged in (potentially
 		refreshing their credentials). Fails the request with 401 error if not logged
 		in.
+		Upon success, adds authTokenClaim to c.locals for key authToken
 	*/
-	IsAuthenticatedFiberMiddleware func(*fiber.Ctx)
+	IsAuthenticatedFiberMiddleware func(*fiber.Ctx) error
 }
 
 func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 	return &AuthProvider{
 		CreateAuthCookie: func(user structs.UserWithId) *fiber.Cookie {
-			return createAuthCookie(user, authPrivateKey)
+			return createAuthCookieFromUser(user, authPrivateKey)
 		},
 		CreateRefreshCookie: func(user structs.UserWithId) *fiber.Cookie {
-			return createRefreshCookie(user, refreshPrivateKey)
+			return createRefreshCookie(user.ID.Hex(), refreshPrivateKey)
 		},
-		IsAuthenticatedFiberMiddleware: func(c *fiber.Ctx) {
-			isAuthenticatedFiberMiddleware(c, authPrivateKey, refreshPrivateKey)
+		IsAuthenticatedFiberMiddleware: func(c *fiber.Ctx) error {
+			return isAuthenticatedFiberMiddleware(c, authPrivateKey, refreshPrivateKey)
 		},
 	}
 }
@@ -58,30 +62,74 @@ func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 To be used as fiber middleware. Proceeds if user is logged in (potentially
 refreshing their credentials). Fails the request with 401 error if not logged
 in.
+Upon success, adds authTokenClaim to c.locals for key authToken
 */
 func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
-	refreshPrivateKey string) {
+	refreshPrivateKey string) error {
+	// Get cookies
 	auth := c.Cookies(AUTH_COOKIE_NAME)
 	refresh := c.Cookies(REFRESH_COOKIE_NAME)
+	// Fail if cookies weren't found
 	if auth == "" || refresh == "" {
-		c.SendStatus(http.StatusUnauthorized)
+		return c.SendStatus(failUnauthenticatedRequest(c))
 	}
-	// Validate auth token
-	//jwt.Parse(auth)
+
+	// Validate & parse tokens
+	refreshToken, err := parseJWT(refresh, &structs.RefreshTokenClaim{}, refreshPrivateKey)
+	if err != nil || refreshToken == nil {
+		// Invalid token case
+		return c.SendStatus(http.StatusUnauthorized)
+	}
+	authToken, err := parseJWT(auth, &structs.AuthTokenClaim{}, authPrivateKey)
+
+	isAuthenticated := false // Assume token is invalid
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		// Expired auth token -- attempt to refresh token
+		isAuthenticated = refreshCookies(c, refreshToken, authToken,
+			authPrivateKey, refreshPrivateKey)
+	} else if err == nil && authToken != nil {
+		// Success case where auth token is valid and not expired
+		isAuthenticated = true
+	}
+	// Convert claims to specific jwt claims
+	authTokenClaim, authParsed := authToken.(*structs.AuthTokenClaim)
+
+	if isAuthenticated && authParsed {
+		// Add auth token to context for user later
+		c.Locals("authToken", authTokenClaim)
+		// Proceed with request
+		return c.Next()
+	} else {
+		return c.SendStatus(failUnauthenticatedRequest(c))
+	}
 }
 
 /*
 Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
 Returns nil if an error occurs.
+JWT Cookie is defined in structs.AuthTokenClaim
 */
-func createAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
+func createAuthCookieFromUser(user structs.UserWithId, key string) *fiber.Cookie {
+	return createAuthCookie(user.Email, user.FirstName+" "+user.LastName, user.ID.Hex(), key)
+}
+
+/*
+Given the params returns a JWT auth token signed by the key as a fiber cookie.
+Returns nil if an error occurs.
+JWT Cookie is defined in structs.AuthTokenClaim
+*/
+func createAuthCookie(email string, name string, id string, key string) *fiber.Cookie {
 	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": user.Email,
-		"name":  user.FirstName + " " + user.LastName,
-		"id":    user.ID.Hex(),
-		"iat":   time.Now().Unix(),
-		"exp":   time.Now().Unix() + constants.AuthTokenExpirySeconds,
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, structs.AuthTokenClaim{
+		Data: structs.AuthTokenJWT{
+			Email: email,
+			Name:  name,
+			Id:    id,
+		},
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constants.AuthTokenExpirySeconds * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
 	})
 	// Sign token
 	signedToken, err := token.SignedString([]byte(key))
@@ -101,21 +149,25 @@ func createAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
 /*
 Given a user & key returns a JWT refresh token signed by the key as a fiber cookie.
 Returns nil if an error occurs.
-Note:
-- Also writes a secret to the DB to validate the refresh token later.
+Note: Also writes a hashed secret to the DB to validate the refresh token later.
+JWT Cookie is defined in structs.RefreshTokenClaim
 */
-func createRefreshCookie(user structs.UserWithId, key string) *fiber.Cookie {
-	refreshSecret, secretId, err := generateAndPrepareRefreshSecret(user.ID.Hex())
+func createRefreshCookie(userId string, key string) *fiber.Cookie {
+	refreshSecret, secretId, err := generateAndPrepareRefreshSecret(userId)
 	if err != nil {
 		return nil
 	}
 	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userId":   user.ID.Hex(),
-		"secret":   refreshSecret,
-		"secretId": secretId,
-		"iat":      time.Now().Unix(),
-		"exp":      time.Now().Unix() + constants.RefreshTokenExpirySeconds,
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, structs.RefreshTokenClaim{
+		Data: structs.RefreshTokenJWT{
+			UserId:   userId,
+			Secret:   refreshSecret,
+			SecretId: secretId,
+		},
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constants.RefreshTokenExpirySeconds * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
 	})
 	// Sign token
 	signedToken, err := token.SignedString([]byte(key))
@@ -187,4 +239,74 @@ func generateRandomByteArray(n int) ([]byte, error) {
 		res[i] = chars[num.Int64()]
 	}
 	return res, nil
+}
+
+/*
+Parses the given tokenString (JWT) and verifies its signature using privateKey.
+Returns the token as a map upon success, otherwise returns claims, along with
+and error.
+*/
+func parseJWT(tokenString string, claim jwt.Claims, privateKey string) (jwt.Claims, error) {
+	// Validate token
+	token, err := jwt.ParseWithClaims(tokenString, claim, func(token *jwt.Token) (interface{}, error) {
+		// Check signing method
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		// Return private key
+		return []byte(privateKey), nil
+	})
+	// Return error if invalid
+	if err != nil || !token.Valid {
+		return token.Claims, err
+	}
+	return token.Claims, err
+}
+
+/*
+Uses the given refreshToken, and refreshes the auth & refresh cookie, placing
+them into the fiber.ctx. Returns true upon success, false otherwise.
+*/
+func refreshCookies(c *fiber.Ctx, refreshToken jwt.Claims, authToken jwt.Claims, authPrivateKey string, refreshPrivateKey string) bool {
+	// Parse the token into a refreshToken struct
+	refreshTokenClaim, refreshParsed := refreshToken.(*structs.RefreshTokenClaim)
+	authTokenClaim, authParsed := authToken.(*structs.AuthTokenClaim)
+	if refreshParsed && authParsed {
+		// Attempt to use refresh token
+		if useRefreshToken(refreshTokenClaim.Data.UserId,
+			refreshTokenClaim.Data.SecretId, refreshTokenClaim.Data.Secret) {
+			// Refresh token used -- refresh credentials
+			refreshedAuthCookie := createAuthCookie(authTokenClaim.Data.Email,
+				authTokenClaim.Data.Name, authTokenClaim.Data.Id, authPrivateKey)
+			refreshedRefreshCookie := createRefreshCookie(authTokenClaim.Data.Id, refreshPrivateKey)
+			if refreshedAuthCookie != nil && refreshedRefreshCookie != nil {
+				c.Cookie(refreshedAuthCookie)
+				c.Cookie(refreshedRefreshCookie)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+/*
+Given the userId, refresh token id & refresh token secret, deletes the
+database record for the refresh token, and checks if the refreshSecret
+is equal to the hashed one in the database.
+Returns true if the token is successfully used, false otherwise.
+*/
+func useRefreshToken(userId string, refreshId string, refreshSecret string) bool {
+	refreshSecretHashed, err := persistence.GetAndDeleteRefreshTokenSecret(userId, refreshId)
+	if err != nil {
+		return false
+	}
+	// Validate refresh secret
+	return bcrypt.CompareHashAndPassword([]byte(refreshSecretHashed), []byte(refreshSecret)) == nil
+}
+
+// Clears the auth & refresh cookies & returns 401
+func failUnauthenticatedRequest(c *fiber.Ctx) int {
+	c.ClearCookie(AUTH_COOKIE_NAME)
+	c.ClearCookie(REFRESH_COOKIE_NAME)
+	return http.StatusUnauthorized
 }
