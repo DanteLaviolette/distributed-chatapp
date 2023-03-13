@@ -12,8 +12,8 @@ import (
 /*
 Gets user with the given email, returning an error upon failure.
 */
-func GetUser(email string) (structs.User, error) {
-	var res structs.User
+func GetUserWithId(email string) (structs.UserWithId, error) {
+	var res structs.UserWithId
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()

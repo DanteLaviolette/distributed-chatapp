@@ -13,10 +13,11 @@ import (
 Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
 Returns nil if an error occurs.
 */
-func CreateAuthCookie(user structs.User, key string) *fiber.Cookie {
+func CreateAuthCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
 		"name":  user.FirstName + " " + user.LastName,
+		"id":    user.ID.Hex(),
 		"iat":   time.Now().Unix(),
 		"exp":   time.Now().Unix() + constants.AuthTokenExpirySeconds,
 	})
@@ -37,10 +38,11 @@ func CreateAuthCookie(user structs.User, key string) *fiber.Cookie {
 Given a user & key returns a JWT refresh token signed by the key as a fiber cookie.
 Returns nil if an error occurs.
 */
-func CreateRefreshCookie(user structs.User, key string) *fiber.Cookie {
+func CreateRefreshCookie(user structs.UserWithId, key string) *fiber.Cookie {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": user.Email,
 		"name":  user.FirstName + " " + user.LastName,
+		"id":    user.ID.Hex(),
 		"iat":   time.Now().Unix(),
 		"exp":   time.Now().Unix() + constants.RefreshTokenExpirySeconds,
 	})
