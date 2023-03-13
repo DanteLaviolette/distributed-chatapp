@@ -3,7 +3,8 @@ import { Stack } from "@mui/system";
 import axios from "axios";
 import PropTypes from 'prop-types';
 import { useState } from "react";
-import { getSignedInUser } from "../utils";
+import constants from "../constants";
+import { getSignedInUser, validatePassword } from "../utils";
 
 Register.propTypes = {
     setUser: PropTypes.func
@@ -33,20 +34,20 @@ function Register(props) {
         if (password !== confirmPassword) {
             setErrorMessage("Passwords not equal")
             return
-        } else if (password.length < 8) {
+        } else if (!validatePassword(password)) {
             setErrorMessage("Passwords must be 8 characters")
             return
         }
         setIsLoading(true)
         // Attempt to register
-        axios.post("/api/register", {
+        axios.post("/api_register/register", {
             "email": email,
             "firstName": firstName,
             "lastName": lastName,
             "password": password,
         }).then(res => {
             // Success -- attempt to login
-            axios.post("/api/login", {
+            axios.post("/api_login/login", {
                 "email": email,
                 "password": password
             }).finally(() => {
@@ -82,7 +83,7 @@ function Register(props) {
                     {isLoading && <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>}
                     {!isLoading && <div>
                         <Typography level="body2">
-                            Password must be at least 8 characters.
+                            {constants.PASSWORD_REQUIREMENTS}
                         </Typography>
                         <form
                             onSubmit={(event) => {
