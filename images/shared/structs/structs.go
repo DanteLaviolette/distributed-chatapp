@@ -25,7 +25,13 @@ type LoginRequest struct {
 	Password string
 }
 
-type RefreshTokenDocument struct {
+type RefreshToken struct {
+	UserId string
+	Secret string
+}
+
+type RefreshTokenWithId struct {
+	ID     primitive.ObjectID `bson:"_id" json:"id"`
 	UserId string
 	Secret string
 }
