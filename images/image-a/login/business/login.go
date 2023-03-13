@@ -1,6 +1,7 @@
 package business
 
 import (
+	"log"
 	"login/persistence"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
 	user, err := persistence.GetUserWithId(loginInfo.Email)
 	// User not found case
 	if err != nil {
+		log.Print(err)
 		return nil, nil, http.StatusBadRequest
 	}
 	// Invalid password case
