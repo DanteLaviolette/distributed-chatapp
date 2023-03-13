@@ -28,7 +28,7 @@ function SignIn(props) {
         setErrorMessage("")
         setIsLoading(true)
         // Attempt to register
-        axios.post("/api/login", {
+        axios.post("/api_login/login", {
             "email": email,
             "password": password,
         }).then(res => {
