@@ -42,8 +42,8 @@ func loginEndpoint(c *fiber.Ctx) error {
 	authCookie, refreshCookie, resCode := business.Login(loginRequest)
 	// Set cookies if successful
 	if resCode == 200 {
-		c.Cookie(&authCookie)
-		c.Cookie(&refreshCookie)
+		c.Cookie(authCookie)
+		c.Cookie(refreshCookie)
 	}
 	// Return status code
 	return c.SendStatus(resCode)
