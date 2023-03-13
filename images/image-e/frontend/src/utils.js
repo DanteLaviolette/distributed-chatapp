@@ -11,3 +11,10 @@ export const getSignedInUser = () => {
     }
     return null;
 }
+
+/*
+Returns true if the password is valid, false otherwise.
+*/
+export const validatePassword = (password) => {
+    return password.length >= 8
+}
