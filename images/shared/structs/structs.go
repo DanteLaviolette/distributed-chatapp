@@ -13,3 +13,8 @@ type LoginRequest struct {
 	Email    string
 	Password string
 }
+
+type RefreshTokenDocument struct {
+	UserId string
+	Secret string
+}

@@ -127,14 +127,23 @@ func createUserIndices() {
 /*
 Creates refresh token index:
 - db.RefreshTokens.createIndex( expireAfterSeconds: constants.RefreshTokenExpirySeconds } )
+- db.RefreshTokens.createIndex( { "secret": 1 }, { unique: true } )
 */
 func createRefreshTokenIndices() {
-	// Define index
-	indexModel := mongo.IndexModel{
-		Keys: bson.M{
-			"createdAt": 1,
+	// Define indices
+	indexModels := []mongo.IndexModel{
+		{
+			Keys: bson.M{
+				"createdAt": 1,
+			},
+			Options: options.Index().SetExpireAfterSeconds(constants.RefreshTokenExpirySeconds),
 		},
-		Options: options.Index().SetExpireAfterSeconds(constants.RefreshTokenExpirySeconds),
+		{
+			Keys: bson.M{
+				"secret": 1, // index in ascending order
+			},
+			Options: options.Index().SetUnique(true),
+		},
 	}
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(),
@@ -142,7 +151,7 @@ func createRefreshTokenIndices() {
 	defer cancel()
 	// Add index to refresh token collection
 	col := GetRefreshTokenCollection()
-	_, err := col.Indexes().CreateOne(ctx, indexModel)
+	_, err := col.Indexes().CreateMany(ctx, indexModels)
 	// Fail if error occurred
 	if err != nil {
 		log.Fatal(err)
