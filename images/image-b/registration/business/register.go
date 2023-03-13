@@ -3,6 +3,7 @@ package business
 import (
 	"log"
 	"net/http"
+	"net/mail"
 	"registration/persistence"
 	"shared/structs"
 
@@ -13,13 +14,14 @@ import (
 const internalServerError = "Something went wrong. Try again later."
 const missingFieldsError = "Fields can't be empty"
 const passwordInvalidError = "Password invalid"
+const emailInvalidError = "Email invalid"
 const duplicateKeyError = "Email already exists"
 
 /*
 Registers the user if possible based on User. Returns the response
 message and response code.
 - 200 upon success
-- 400 if any fields are empty
+- 400 if any fields are empty or invalid
 - 409 if email already exists
 - 500 error code if unexpected error occurs
 */
@@ -29,6 +31,12 @@ func RegisterUser(user structs.User) (string, int) {
 		user.Email == "" || user.Password == "" {
 		return missingFieldsError, http.StatusBadRequest
 	}
+	// Validate email
+	_, err := mail.ParseAddress(user.Email)
+	if err != nil {
+		return emailInvalidError, http.StatusBadRequest
+	}
+	// Validate password
 	if len(user.Password) < 8 {
 		return passwordInvalidError, http.StatusBadRequest
 	}
