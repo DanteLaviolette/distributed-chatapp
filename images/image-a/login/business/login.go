@@ -44,6 +44,16 @@ func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
 	return authToken, refreshToken, http.StatusOK
 }
 
+/*
+Logs the user out given their refresh token id.
+*/
+func Logout(refreshId string) {
+	err := persistence.DeleteRefreshTokenById(refreshId)
+	if err != nil {
+		log.Print(err)
+	}
+}
+
 // Returns true if the password is equal to the hashed password. False otherwise
 func isPasswordEqual(password string, hashedPassword string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword),

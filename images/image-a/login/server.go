@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"login/business"
+	"shared/auth"
 	"shared/persistence"
 	"shared/structs"
 
@@ -52,10 +53,26 @@ func loginEndpoint(c *fiber.Ctx) error {
 	return c.SendStatus(resCode)
 }
 
+func logoutEndpoint(c *fiber.Ctx) error {
+	c.ClearCookie(auth.AUTH_COOKIE_NAME)
+	c.ClearCookie(auth.REFRESH_COOKIE_NAME)
+	c.SendStatus(200)
+	// Get refresh token id
+	refreshTokenId := c.Locals(auth.LOCALS_REFRESH_TOKEN_ID)
+	refreshTokenIdString, ok := refreshTokenId.(string)
+	if ok {
+		business.Logout(refreshTokenIdString)
+	}
+	return nil
+}
+
 func main() {
 	loadDevEnv()
 	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"))
+	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
+		os.Getenv("REFRESH_PRIVATE_KEY"))
 	app := fiber.New()
-	app.Post("/api/login", loginEndpoint)
+	app.Post("/api_login/login", loginEndpoint)
+	app.Post("/api_login/logout", authProvider.IsAuthenticatedFiberMiddleware, logoutEndpoint)
 	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
 }

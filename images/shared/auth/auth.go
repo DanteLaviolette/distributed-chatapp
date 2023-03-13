@@ -22,6 +22,12 @@ const SECRET_LENGTH = 32
 const AUTH_COOKIE_NAME = "auth"
 const REFRESH_COOKIE_NAME = "refresh"
 
+// Local keys
+const LOCALS_USER_ID = "userId"
+const LOCALS_USER_NAME = "userName"
+const LOCALS_USER_EMAIL = "userEmail"
+const LOCALS_REFRESH_TOKEN_ID = "refreshTokenId"
+
 type AuthProvider struct {
 	/*
 	   Given a user & key returns a JWT auth token signed by the key as a fiber cookie.
@@ -40,7 +46,7 @@ type AuthProvider struct {
 		To be used as fiber middleware. Proceeds if user is logged in (potentially
 		refreshing their credentials). Fails the request with 401 error if not logged
 		in.
-		Upon success, adds authTokenClaim to c.locals for key authToken
+		Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
 	*/
 	IsAuthenticatedFiberMiddleware func(*fiber.Ctx) error
 }
@@ -63,7 +69,7 @@ func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 To be used as fiber middleware. Proceeds if user is logged in (potentially
 refreshing their credentials). Fails the request with 401 error if not logged
 in.
-Upon success, adds authTokenClaim to c.locals for key authToken
+Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
 */
 func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
 	refreshPrivateKey string) error {
@@ -94,10 +100,14 @@ func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
 	}
 	// Convert claims to specific jwt claims
 	authTokenClaim, authParsed := authToken.(*structs.AuthTokenClaim)
+	refreshTokenClaim, refreshParsed := refreshToken.(*structs.RefreshTokenClaim)
 
-	if isAuthenticated && authParsed {
+	if isAuthenticated && authParsed && refreshParsed {
 		// Add auth token to context for user later
-		c.Locals("authToken", authTokenClaim)
+		c.Locals(LOCALS_USER_ID, authTokenClaim.Data.Id)
+		c.Locals(LOCALS_USER_NAME, authTokenClaim.Data.Name)
+		c.Locals(LOCALS_USER_EMAIL, authTokenClaim.Data.Email)
+		c.Locals(LOCALS_REFRESH_TOKEN_ID, refreshTokenClaim.Data.UserId)
 		// Proceed with request
 		return c.Next()
 	} else {
