@@ -12,6 +12,7 @@ import (
 
 const internalServerError = "Something went wrong. Try again later."
 const missingFieldsError = "Fields can't be empty"
+const passwordInvalidError = "Password invalid"
 const duplicateKeyError = "Email already exists"
 
 /*
@@ -27,6 +28,9 @@ func RegisterUser(user structs.User) (string, int) {
 	if user.FirstName == "" || user.LastName == "" ||
 		user.Email == "" || user.Password == "" {
 		return missingFieldsError, http.StatusBadRequest
+	}
+	if len(user.Password) < 8 {
+		return passwordInvalidError, http.StatusBadRequest
 	}
 	// Hash password
 	hash, err := getPasswordHash(user.Password)
