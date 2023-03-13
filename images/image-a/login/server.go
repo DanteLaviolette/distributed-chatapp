@@ -30,7 +30,10 @@ func loadDevEnv() {
 
 /*
 Login endpoint -- attempts to log user in, either returning an error
-or an auth & refresh token upon success. Accepts LoginRequest as JSON POST.
+or an auth & refresh JWT cookie upon success. Accepts LoginRequest as JSON POST.
+- Returns 200 upon success
+- Returns 400 if given bad credentials
+- Returns 500 if something else goes wrong
 */
 func loginEndpoint(c *fiber.Ctx) error {
 	// Parse body to struct
