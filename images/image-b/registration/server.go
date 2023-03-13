@@ -52,6 +52,6 @@ func main() {
 	loadDevEnv()
 	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"))
 	app := fiber.New()
-	app.Post("/api/register", registerEndpoint)
+	app.Post("/api_register/register", registerEndpoint)
 	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
 }
