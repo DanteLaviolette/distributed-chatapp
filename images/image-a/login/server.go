@@ -53,11 +53,16 @@ func loginEndpoint(c *fiber.Ctx) error {
 	return c.SendStatus(resCode)
 }
 
+/*
+Logs the user out. Returns:
+- 409 if not signed in
+- 200 otherwise
+*/
 func logoutEndpoint(c *fiber.Ctx) error {
 	c.ClearCookie(auth.AUTH_COOKIE_NAME)
 	c.ClearCookie(auth.REFRESH_COOKIE_NAME)
 	c.SendStatus(200)
-	// Get refresh token id
+	// Get refresh token id (set by auth middleware)
 	refreshTokenId := c.Locals(auth.LOCALS_REFRESH_TOKEN_ID)
 	refreshTokenIdString, ok := refreshTokenId.(string)
 	if ok {
