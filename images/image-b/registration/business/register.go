@@ -1,6 +1,7 @@
 package business
 
 import (
+	"log"
 	"net/http"
 	"registration/persistence"
 	"shared/structs"
@@ -30,6 +31,7 @@ func RegisterUser(user structs.User) (string, int) {
 	// Hash password
 	hash, err := getPasswordHash(user.Password)
 	if err != nil {
+		log.Print(err)
 		return internalServerError, http.StatusInternalServerError
 	}
 	// Set password to the hashed password
@@ -40,6 +42,7 @@ func RegisterUser(user structs.User) (string, int) {
 	if mongo.IsDuplicateKeyError(err) {
 		return duplicateKeyError, http.StatusConflict
 	} else if err != nil {
+		log.Print(err)
 		return internalServerError, http.StatusInternalServerError
 	}
 	return "", 200
