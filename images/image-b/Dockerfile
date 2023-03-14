@@ -1,1 +1,0 @@
-ENV GO_ENV=PROD

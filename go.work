@@ -1,7 +1,0 @@
-go 1.20
-
-use (
-	./images/image-a/login
-	./images/image-b/registration
-	./images/shared
-)

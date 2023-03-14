@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/gofiber/fiber/v2 v2.42.0
-	github.com/joho/godotenv v1.5.1
 	go.mongodb.org/mongo-driver v1.11.2
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	shared v0.0.0-00010101000000-000000000000
@@ -38,4 +37,4 @@ require (
 	golang.org/x/text v0.5.0 // indirect
 )
 
-replace shared => ../../shared
+replace shared => ../shared

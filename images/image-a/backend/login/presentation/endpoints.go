@@ -1,33 +1,14 @@
-package main
+package presentation
 
 import (
-	"log"
 	"net/http"
-	"os"
 
 	"login/business"
 	"shared/auth"
-	"shared/persistence"
 	"shared/structs"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
 )
-
-/*
-Load dev environment from .env if os.Getenv('GO_ENV') != 'prod'
-*/
-func loadDevEnv() {
-	// Get dev env if not prod
-	if os.Getenv("GO_ENV") != "prod" {
-		// Load .env file
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
-		}
-	}
-
-}
 
 /*
 Login endpoint -- attempts to log user in, either returning an error
@@ -36,7 +17,7 @@ or an auth & refresh JWT cookie upon success. Accepts LoginRequest as JSON POST.
 - Returns 400 if given bad credentials
 - Returns 500 if something else goes wrong
 */
-func loginEndpoint(c *fiber.Ctx) error {
+func LoginEndpoint(c *fiber.Ctx) error {
 	// Parse body to struct
 	var loginRequest structs.LoginRequest
 	if err := c.BodyParser(&loginRequest); err != nil {
@@ -58,7 +39,7 @@ Logs the user out. Returns:
 - 401 if not signed in
 - 200 otherwise
 */
-func logoutEndpoint(c *fiber.Ctx) error {
+func LogoutEndpoint(c *fiber.Ctx) error {
 	c.ClearCookie(auth.AUTH_COOKIE_NAME)
 	c.ClearCookie(auth.REFRESH_COOKIE_NAME)
 	c.SendStatus(200)
@@ -69,15 +50,4 @@ func logoutEndpoint(c *fiber.Ctx) error {
 		business.Logout(refreshTokenIdString)
 	}
 	return nil
-}
-
-func main() {
-	loadDevEnv()
-	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"))
-	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
-		os.Getenv("REFRESH_PRIVATE_KEY"))
-	app := fiber.New()
-	app.Post("/api_login/login", loginEndpoint)
-	app.Post("/api_login/logout", authProvider.IsAuthenticatedFiberMiddleware, logoutEndpoint)
-	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
 }
