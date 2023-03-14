@@ -40,14 +40,14 @@ function Register(props) {
         }
         setIsLoading(true)
         // Attempt to register
-        axios.post("/api_register/register", {
+        axios.post("/api/register", {
             "email": email,
             "firstName": firstName,
             "lastName": lastName,
             "password": password,
         }).then(res => {
             // Success -- attempt to login
-            axios.post("/api_login/login", {
+            axios.post("/api/login", {
                 "email": email,
                 "password": password
             }).finally(() => {

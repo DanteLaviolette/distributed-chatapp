@@ -44,7 +44,7 @@ function ProfileMenu(props) {
 
     const handleLogout = () => {
         // Post to login endpoint
-        axios.post('/api_login/logout').then((res) => {
+        axios.post('/api/logout').then((res) => {
             // Set user to null & close popup
             props.setUser(null)
             closePopup()
@@ -100,7 +100,7 @@ function ChangePasswordModal(props) {
             return
         }
         setIsLoading(true)
-        axios.post('/api_register/change_password', {
+        axios.post('/api/change_password', {
             password
         }).then(res => {
             // Success -- close modal
