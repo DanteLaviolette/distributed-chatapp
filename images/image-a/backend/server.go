@@ -26,7 +26,20 @@ func loadDevEnv() {
 			log.Fatal("Error loading .env file")
 		}
 	}
+}
 
+/*
+Exposes the rest endpoints for the various modules to the given app.
+*/
+func exposeEndpoints(app *fiber.App) {
+	// Create auth provider
+	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
+		os.Getenv("REFRESH_PRIVATE_KEY"))
+	// Define endpoints
+	app.Post("/api/login", loginPresentation.LoginEndpoint)
+	app.Post("/api/logout", authProvider.IsAuthenticatedFiberMiddleware, loginPresentation.LogoutEndpoint)
+	app.Post("/api/register", registerPresentation.RegisterEndpoint)
+	app.Post("/api/change_password", authProvider.IsAuthenticatedFiberMiddleware, registerPresentation.ChangePasswordEndpoint)
 }
 
 func main() {
@@ -34,16 +47,9 @@ func main() {
 	loadDevEnv()
 	// Initialize db connection
 	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"))
-	// Create auth provider
-	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
-		os.Getenv("REFRESH_PRIVATE_KEY"))
 	// Initialize fiber (REST framework)
 	app := fiber.New()
-	// Define endpoints
-	app.Post("/api_login/login", loginPresentation.LoginEndpoint)
-	app.Post("/api_login/logout", authProvider.IsAuthenticatedFiberMiddleware, loginPresentation.LogoutEndpoint)
-	app.Post("/api_register/register", registerPresentation.RegisterEndpoint)
-	app.Post("/api_register/change_password", authProvider.IsAuthenticatedFiberMiddleware, registerPresentation.ChangePasswordEndpoint)
+	exposeEndpoints(app)
 	// Listen
 	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
 }
