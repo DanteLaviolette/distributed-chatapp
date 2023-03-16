@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 
-	"shared/auth"
-	"shared/persistence"
+	"go.violettedev.com/eecs4222/auth"
+	"go.violettedev.com/eecs4222/database"
 
-	loginPresentation "login/presentation"
-	registerPresentation "registration/presentation"
+	loginPresentation "go.violettedev.com/eecs4222/login/presentation"
+	registerPresentation "go.violettedev.com/eecs4222/registration/presentation"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -46,7 +46,7 @@ func main() {
 	// Load dev environment if needed
 	loadDevEnv()
 	// Initialize db connection
-	persistence.InitializeDBConnection(os.Getenv("MONGODB_URL"))
+	database.InitializeDBConnection(os.Getenv("MONGODB_URL"))
 	// Initialize fiber (REST framework)
 	app := fiber.New()
 	exposeEndpoints(app)

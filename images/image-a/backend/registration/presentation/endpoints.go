@@ -3,9 +3,9 @@ package presentation
 import (
 	"net/http"
 
-	"registration/business"
-	"shared/auth"
-	"shared/structs"
+	"go.violettedev.com/eecs4222/auth"
+	"go.violettedev.com/eecs4222/registration/business"
+	"go.violettedev.com/eecs4222/structs"
 
 	"github.com/gofiber/fiber/v2"
 )

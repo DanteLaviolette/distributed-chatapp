@@ -4,8 +4,9 @@ import (
 	"log"
 	"net/http"
 	"net/mail"
-	"registration/persistence"
-	"shared/structs"
+
+	"go.violettedev.com/eecs4222/registration/persistence"
+	"go.violettedev.com/eecs4222/structs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"

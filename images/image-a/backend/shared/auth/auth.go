@@ -7,10 +7,10 @@ import (
 	"log"
 	"net/http"
 
-	"shared/constants"
-	"shared/internal/auth/auth_token"
-	"shared/internal/auth/refresh_token"
-	"shared/structs"
+	"go.violettedev.com/eecs4222/auth/internal/auth_token"
+	"go.violettedev.com/eecs4222/auth/internal/refresh_token"
+	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/structs"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"

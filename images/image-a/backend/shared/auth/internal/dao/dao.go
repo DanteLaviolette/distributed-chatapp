@@ -2,9 +2,10 @@ package dao
 
 import (
 	"context"
-	"shared/constants"
-	"shared/persistence"
-	"shared/structs"
+
+	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/database"
+	"go.violettedev.com/eecs4222/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,7 +19,7 @@ func WriteRefreshToken(refreshToken structs.RefreshToken) (string, error) {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetRefreshTokenCollection()
+	collection := database.GetRefreshTokenCollection()
 	// Insert document
 	res, err := collection.InsertOne(ctx, refreshToken)
 	if err != nil {
@@ -42,7 +43,7 @@ func GetAndDeleteRefreshTokenSecret(userIdHex string, refreshIdHex string) (stri
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetRefreshTokenCollection()
+	collection := database.GetRefreshTokenCollection()
 	// Find & delete refresh token
 	err = collection.FindOneAndDelete(ctx, bson.M{
 		"_id":    refreshId,
@@ -66,7 +67,7 @@ func DeleteRefreshTokenById(id string) error {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetRefreshTokenCollection()
+	collection := database.GetRefreshTokenCollection()
 	// Delete refresh token
 	_, err = collection.DeleteOne(ctx, bson.M{
 		"_id": refreshId,

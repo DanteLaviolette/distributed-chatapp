@@ -1,13 +1,14 @@
-package persistence
+package database
 
 import (
 	"context"
 	"log"
 	"os"
 	"os/signal"
-	"shared/constants"
 	"syscall"
 	"time"
+
+	"go.violettedev.com/eecs4222/constants"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

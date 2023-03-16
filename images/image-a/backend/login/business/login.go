@@ -2,11 +2,12 @@ package business
 
 import (
 	"log"
-	"login/persistence"
 	"net/http"
 	"os"
-	"shared/auth"
-	"shared/structs"
+
+	"go.violettedev.com/eecs4222/auth"
+	"go.violettedev.com/eecs4222/login/persistence"
+	"go.violettedev.com/eecs4222/structs"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"

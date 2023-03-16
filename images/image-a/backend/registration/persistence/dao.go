@@ -2,9 +2,10 @@ package persistence
 
 import (
 	"context"
-	"shared/constants"
-	"shared/persistence"
-	"shared/structs"
+
+	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/database"
+	"go.violettedev.com/eecs4222/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,7 +19,7 @@ func InsertUser(user structs.User) error {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetUserCollection()
+	collection := database.GetUserCollection()
 	_, err := collection.InsertOne(ctx, user)
 	return err
 }
@@ -33,7 +34,7 @@ func UpdatePasswordForUserId(userId string, passwordHash string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetUserCollection()
+	collection := database.GetUserCollection()
 	_, err = collection.UpdateOne(ctx, bson.M{
 		"_id": id,
 	}, bson.M{

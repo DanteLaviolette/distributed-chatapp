@@ -1,30 +1,28 @@
-module go.violettedev.com/eecs4222/login
+module go.violettedev.com/eecs4222/auth
 
 go 1.20
 
 require (
-	github.com/gofiber/fiber/v2 v2.42.0
-	go.mongodb.org/mongo-driver v1.11.2
-	golang.org/x/crypto v0.7.0
-)
-
-require (
-	go.violettedev.com/eecs4222/auth v1.0.0
 	go.violettedev.com/eecs4222/constants v1.0.0
 	go.violettedev.com/eecs4222/database v1.0.0
 	go.violettedev.com/eecs4222/structs v1.0.0
 )
 
 replace (
-	go.violettedev.com/eecs4222/auth => ../shared/auth
-	go.violettedev.com/eecs4222/constants => ../shared/constants
-	go.violettedev.com/eecs4222/database => ../shared/database
-	go.violettedev.com/eecs4222/structs => ../shared/structs
+	go.violettedev.com/eecs4222/constants => ../constants
+	go.violettedev.com/eecs4222/database => ../database
+	go.violettedev.com/eecs4222/structs => ../structs
+)
+
+require (
+	github.com/gofiber/fiber/v2 v2.42.0
+	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1
+	go.mongodb.org/mongo-driver v1.11.2
+	golang.org/x/crypto v0.7.0
 )
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect

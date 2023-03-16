@@ -2,9 +2,10 @@ package persistence
 
 import (
 	"context"
-	"shared/constants"
-	"shared/persistence"
-	"shared/structs"
+
+	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/database"
+	"go.violettedev.com/eecs4222/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -17,7 +18,7 @@ func GetUserWithId(email string) (structs.UserWithId, error) {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := persistence.GetUserCollection()
+	collection := database.GetUserCollection()
 	err := collection.FindOne(ctx, bson.M{
 		"email": email,
 	}).Decode(&res)

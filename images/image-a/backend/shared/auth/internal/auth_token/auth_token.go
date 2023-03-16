@@ -3,10 +3,11 @@ package auth_token
 
 import (
 	"log"
-	"shared/constants"
-	"shared/internal/auth/token_util"
-	"shared/structs"
 	"time"
+
+	"go.violettedev.com/eecs4222/auth/internal/token_util"
+	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/structs"
 
 	"github.com/golang-jwt/jwt/v5"
 )

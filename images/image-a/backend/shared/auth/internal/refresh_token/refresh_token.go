@@ -5,11 +5,13 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
-	"shared/constants"
-	"shared/internal/auth/token_util"
-	"shared/internal/dao"
-	"shared/structs"
 	"time"
+
+	"go.violettedev.com/eecs4222/structs"
+
+	"go.violettedev.com/eecs4222/auth/internal/dao"
+	"go.violettedev.com/eecs4222/auth/internal/token_util"
+	"go.violettedev.com/eecs4222/constants"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
