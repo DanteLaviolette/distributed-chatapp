@@ -5,7 +5,7 @@ import (
 
 	"go.violettedev.com/eecs4222/shared/constants"
 	"go.violettedev.com/eecs4222/shared/database"
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,7 +15,9 @@ import (
 Adds user to the database, returning the db error if the insertion failed, or
 null otherwise.
 */
-func InsertUser(user structs.User) error {
+func InsertUser(user schema.UserSchema) error {
+	// Set random ID
+	user.ID = primitive.NewObjectID()
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()

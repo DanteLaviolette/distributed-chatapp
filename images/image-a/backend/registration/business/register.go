@@ -6,7 +6,8 @@ import (
 	"net/mail"
 
 	"go.violettedev.com/eecs4222/registration/persistence"
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/registration/structs"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -26,29 +27,24 @@ message and response code.
 - 409 if email already exists
 - 500 error code if unexpected error occurs
 */
-func RegisterUser(user structs.User) (string, int) {
-	// Fail if fields are missing
-	if user.FirstName == "" || user.LastName == "" ||
-		user.Email == "" || user.Password == "" {
-		return missingFieldsError, http.StatusBadRequest
-	}
-	// Validate email
-	_, err := mail.ParseAddress(user.Email)
-	if err != nil {
-		return emailInvalidError, http.StatusBadRequest
-	}
-	// Validate password
-	if !isPasswordValid(user.Password) {
-		return passwordInvalidError, http.StatusBadRequest
+func RegisterUser(registrationRequest structs.RegistrationRequest) (string, int) {
+	valid, errMsg := validateRegistrationRequest(registrationRequest)
+	if !valid {
+		return errMsg, http.StatusBadRequest
 	}
 	// Hash password
-	hash, err := getPasswordHash(user.Password)
+	hashedPassword, err := getPasswordHash(registrationRequest.Password)
 	if err != nil {
 		log.Print(err)
 		return internalServerError, http.StatusInternalServerError
 	}
-	// Set password to the hashed password
-	user.Password = hash
+	// Create user
+	user := schema.UserSchema{
+		Email:     registrationRequest.Email,
+		FirstName: registrationRequest.FirstName,
+		LastName:  registrationRequest.LastName,
+		Password:  hashedPassword,
+	}
 	// Attempt to register user
 	err = persistence.InsertUser(user)
 	// Fail if error ocurred (dupe key error means email already exists)
@@ -96,4 +92,26 @@ func isPasswordValid(password string) bool {
 func getPasswordHash(password string) (string, error) {
 	res, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(res), err
+}
+
+/*
+Returns true, "" if the registration request is valid, false and an error string
+otherwise.
+*/
+func validateRegistrationRequest(registrationRequest structs.RegistrationRequest) (bool, string) {
+	// Fail if fields are missing
+	if registrationRequest.FirstName == "" || registrationRequest.LastName == "" ||
+		registrationRequest.Email == "" || registrationRequest.Password == "" {
+		return false, missingFieldsError
+	}
+	// Validate email
+	_, err := mail.ParseAddress(registrationRequest.Email)
+	if err != nil {
+		return false, emailInvalidError
+	}
+	// Validate password
+	if !isPasswordValid(registrationRequest.Password) {
+		return false, passwordInvalidError
+	}
+	return true, ""
 }

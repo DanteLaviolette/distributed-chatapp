@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"go.violettedev.com/eecs4222/login/persistence"
+	"go.violettedev.com/eecs4222/login/structs"
 	"go.violettedev.com/eecs4222/shared/auth"
-	"go.violettedev.com/eecs4222/shared/structs"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,7 +21,7 @@ Returns a failure status code if something goes wrong (400 for bad credentials,
 or 500 for unexpected error)
 */
 func Login(loginInfo structs.LoginRequest, c *fiber.Ctx) int {
-	user, err := persistence.GetUserWithId(loginInfo.Email)
+	user, err := persistence.GetUser(loginInfo.Email)
 	// User not found or network error case
 	if err != nil {
 		// Log network error

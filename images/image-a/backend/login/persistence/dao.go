@@ -5,7 +5,7 @@ import (
 
 	"go.violettedev.com/eecs4222/shared/constants"
 	"go.violettedev.com/eecs4222/shared/database"
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -13,8 +13,8 @@ import (
 /*
 Gets user with the given email, returning an error upon failure.
 */
-func GetUserWithId(email string) (structs.UserWithId, error) {
-	var res structs.UserWithId
+func GetUser(email string) (schema.UserSchema, error) {
+	var res schema.UserSchema
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()

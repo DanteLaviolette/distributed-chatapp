@@ -9,8 +9,10 @@ import (
 
 	"go.violettedev.com/eecs4222/shared/auth/internal/auth_token"
 	"go.violettedev.com/eecs4222/shared/auth/internal/refresh_token"
+	"go.violettedev.com/eecs4222/shared/auth/internal/structs"
 	"go.violettedev.com/eecs4222/shared/constants"
-	"go.violettedev.com/eecs4222/shared/structs"
+
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -30,7 +32,7 @@ type AuthProvider struct {
 		Generates and adds credentials to the response. Returns true on success,
 		false on failure.
 	*/
-	GenerateAndSetCredentials func(structs.UserWithId, *fiber.Ctx) bool
+	GenerateAndSetCredentials func(schema.UserSchema, *fiber.Ctx) bool
 	/*
 		To be used as fiber middleware. Proceeds if user is logged in (potentially
 		refreshing their credentials). Fails the request with 401 error if not logged
@@ -45,7 +47,7 @@ func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 		IsAuthenticatedFiberMiddleware: func(c *fiber.Ctx) error {
 			return isAuthenticatedFiberMiddleware(c, authPrivateKey, refreshPrivateKey)
 		},
-		GenerateAndSetCredentials: func(user structs.UserWithId, c *fiber.Ctx) bool {
+		GenerateAndSetCredentials: func(user schema.UserSchema, c *fiber.Ctx) bool {
 			return generateAndSetAuthHeaderAndRefreshToken(user, c,
 				authPrivateKey, refreshPrivateKey) == nil
 		},
@@ -127,7 +129,7 @@ func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
 /*
 Generates and adds credentials to the response.
 */
-func generateAndSetAuthHeaderAndRefreshToken(user structs.UserWithId,
+func generateAndSetAuthHeaderAndRefreshToken(user schema.UserSchema,
 	c *fiber.Ctx, authPrivateKey string, refreshPrivateKey string) error {
 	authToken, err := auth_token.CreateAuthTokenFromUser(user, authPrivateKey)
 	if err != nil {

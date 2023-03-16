@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"go.violettedev.com/eecs4222/login/business"
+	"go.violettedev.com/eecs4222/login/structs"
 	"go.violettedev.com/eecs4222/shared/auth"
-	"go.violettedev.com/eecs4222/shared/structs"
 
 	"github.com/gofiber/fiber/v2"
 )

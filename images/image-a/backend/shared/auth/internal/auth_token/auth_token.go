@@ -5,9 +5,10 @@ import (
 	"log"
 	"time"
 
+	"go.violettedev.com/eecs4222/shared/auth/internal/structs"
 	"go.violettedev.com/eecs4222/shared/auth/internal/token_util"
 	"go.violettedev.com/eecs4222/shared/constants"
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -29,7 +30,7 @@ Given a user & key returns a JWT auth token signed by the key as a
 string. Returns empty str with error if an error occurs.
 JWT contains the fields id, email, name, iat & exp.
 */
-func CreateAuthTokenFromUser(user structs.UserWithId, key string) (string, error) {
+func CreateAuthTokenFromUser(user schema.UserSchema, key string) (string, error) {
 	return CreateAuthToken(user.Email, user.FirstName+" "+user.LastName, user.ID.Hex(), key)
 }
 

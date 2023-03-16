@@ -5,7 +5,7 @@ import (
 
 	"go.violettedev.com/eecs4222/shared/constants"
 	"go.violettedev.com/eecs4222/shared/database"
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,7 +15,7 @@ import (
 Writes the refresh token to the database, returning the objects ID or an
 error if one occurred.
 */
-func WriteRefreshToken(refreshToken structs.RefreshToken) (string, error) {
+func WriteRefreshToken(refreshToken schema.RefreshTokenSchema) (string, error) {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
@@ -35,7 +35,7 @@ Returns the refresh tokens secret (hashed) upon success. Returns an empty string
 with an error otherwise.
 */
 func GetAndDeleteRefreshTokenSecret(userIdHex string, refreshIdHex string) (string, error) {
-	var res structs.RefreshTokenWithId
+	var res schema.RefreshTokenSchema
 	refreshId, err := primitive.ObjectIDFromHex(refreshIdHex)
 	if err != nil {
 		return "", err

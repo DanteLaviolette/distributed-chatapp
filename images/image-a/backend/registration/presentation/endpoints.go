@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"go.violettedev.com/eecs4222/registration/business"
+	"go.violettedev.com/eecs4222/registration/structs"
 	"go.violettedev.com/eecs4222/shared/auth"
-	"go.violettedev.com/eecs4222/shared/structs"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 /*
 Registration endpoint -- attempts to register user
-Accepts a POST request containing User as JSON.
+Accepts a POST request containing RegistrationRequest as JSON.
 Returns:
 - 200 upon success
 - 400 if any fields are empty or request is invalid
@@ -21,7 +21,7 @@ Returns:
 */
 func RegisterEndpoint(c *fiber.Ctx) error {
 	// Parse body to struct
-	var registerInfo structs.User
+	var registerInfo structs.RegistrationRequest
 	if err := c.BodyParser(&registerInfo); err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}

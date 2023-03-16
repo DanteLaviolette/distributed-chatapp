@@ -7,11 +7,13 @@ import (
 	"math/big"
 	"time"
 
-	"go.violettedev.com/eecs4222/shared/structs"
+	"go.violettedev.com/eecs4222/shared/auth/internal/structs"
 
 	"go.violettedev.com/eecs4222/shared/auth/internal/dao"
 	"go.violettedev.com/eecs4222/shared/auth/internal/token_util"
 	"go.violettedev.com/eecs4222/shared/constants"
+
+	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -103,7 +105,7 @@ func generateAndPrepareRefreshSecret(userId string) (string, string, error) {
 		return "", "", err
 	}
 	// Write secret to db
-	id, err := dao.WriteRefreshToken(structs.RefreshToken{
+	id, err := dao.WriteRefreshToken(schema.RefreshTokenSchema{
 		Secret: hashedSecret,
 		UserId: userId,
 	})

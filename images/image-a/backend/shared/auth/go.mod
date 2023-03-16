@@ -5,13 +5,11 @@ go 1.20
 require (
 	go.violettedev.com/eecs4222/shared/constants v1.0.0
 	go.violettedev.com/eecs4222/shared/database v1.0.0
-	go.violettedev.com/eecs4222/shared/structs v1.0.0
 )
 
 replace (
 	go.violettedev.com/eecs4222/shared/constants => ../constants
 	go.violettedev.com/eecs4222/shared/database => ../database
-	go.violettedev.com/eecs4222/shared/structs => ../structs
 )
 
 require (
