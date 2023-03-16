@@ -14,12 +14,12 @@ import (
 )
 
 /*
-Logs the user in returning auth & refresh JWT cookies upon success along with
+Logs the user in setting auth header & refresh cookie upon success, returning a
 a 200 status code.
 Returns a failure status code if something goes wrong (400 for bad credentials,
 or 500 for unexpected error)
 */
-func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
+func Login(loginInfo structs.LoginRequest, c *fiber.Ctx) int {
 	user, err := persistence.GetUserWithId(loginInfo.Email)
 	// User not found or network error case
 	if err != nil {
@@ -27,31 +27,20 @@ func Login(loginInfo structs.LoginRequest) (*fiber.Cookie, *fiber.Cookie, int) {
 		if mongo.IsNetworkError(err) {
 			log.Print(err)
 		}
-		return nil, nil, http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 	// Invalid password case
 	if !isPasswordEqual(loginInfo.Password, user.Password) {
-		return nil, nil, http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 	// Password is valid & user was found, generate auth & refresh token cookies
 	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
 		os.Getenv("REFRESH_PRIVATE_KEY"))
-	authToken := authProvider.CreateAuthCookie(user)
-	refreshToken := authProvider.CreateRefreshCookie(user)
-	if authToken == nil || refreshToken == nil {
-		return nil, nil, http.StatusInternalServerError
+	// Handle credentials
+	if !authProvider.GenerateAndSetCredentials(user, c) {
+		return http.StatusInternalServerError
 	}
-	return authToken, refreshToken, http.StatusOK
-}
-
-/*
-Logs the user out given their refresh token id.
-*/
-func Logout(refreshId string) {
-	err := persistence.DeleteRefreshTokenById(refreshId)
-	if err != nil {
-		log.Print(err)
-	}
+	return http.StatusOK
 }
 
 // Returns true if the password is equal to the hashed password. False otherwise

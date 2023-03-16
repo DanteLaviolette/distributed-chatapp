@@ -1,8 +1,9 @@
-package persistence
+package dao
 
 import (
 	"context"
 	"shared/constants"
+	"shared/persistence"
 	"shared/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,7 +18,7 @@ func WriteRefreshToken(refreshToken structs.RefreshToken) (string, error) {
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := GetRefreshTokenCollection()
+	collection := persistence.GetRefreshTokenCollection()
 	// Insert document
 	res, err := collection.InsertOne(ctx, refreshToken)
 	if err != nil {
@@ -41,7 +42,7 @@ func GetAndDeleteRefreshTokenSecret(userIdHex string, refreshIdHex string) (stri
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	collection := GetRefreshTokenCollection()
+	collection := persistence.GetRefreshTokenCollection()
 	// Find & delete refresh token
 	err = collection.FindOneAndDelete(ctx, bson.M{
 		"_id":    refreshId,
@@ -51,4 +52,27 @@ func GetAndDeleteRefreshTokenSecret(userIdHex string, refreshIdHex string) (stri
 		return "", err
 	}
 	return res.Secret, nil
+}
+
+/*
+Deletes the refresh token of the given id. Returns an error upon failure,
+nil otherwise.
+*/
+func DeleteRefreshTokenById(id string) error {
+	refreshId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	// Create context
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	collection := persistence.GetRefreshTokenCollection()
+	// Delete refresh token
+	_, err = collection.DeleteOne(ctx, bson.M{
+		"_id": refreshId,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -23,15 +23,8 @@ func LoginEndpoint(c *fiber.Ctx) error {
 	if err := c.BodyParser(&loginRequest); err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}
-	// Handle business logic
-	authCookie, refreshCookie, resCode := business.Login(loginRequest)
-	// Set cookies if successful
-	if resCode == 200 {
-		c.Cookie(authCookie)
-		c.Cookie(refreshCookie)
-	}
 	// Return status code
-	return c.SendStatus(resCode)
+	return c.SendStatus(business.Login(loginRequest, c))
 }
 
 /*
@@ -40,14 +33,6 @@ Logs the user out. Returns:
 - 200 otherwise
 */
 func LogoutEndpoint(c *fiber.Ctx) error {
-	c.ClearCookie(auth.AUTH_COOKIE_NAME)
-	c.ClearCookie(auth.REFRESH_COOKIE_NAME)
-	c.SendStatus(200)
-	// Get refresh token id (set by auth middleware)
-	refreshTokenId := c.Locals(auth.LOCALS_REFRESH_TOKEN_ID)
-	refreshTokenIdString, ok := refreshTokenId.(string)
-	if ok {
-		business.Logout(refreshTokenIdString)
-	}
-	return nil
+	auth.InvalidateCredentials(c)
+	return c.SendStatus(200)
 }
