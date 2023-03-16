@@ -16,6 +16,7 @@ Writes the refresh token to the database, returning the objects ID or an
 error if one occurred.
 */
 func WriteRefreshToken(refreshToken schema.RefreshTokenSchema) (string, error) {
+	refreshToken.ID = primitive.NewObjectID()
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
