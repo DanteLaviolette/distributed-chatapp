@@ -36,3 +36,11 @@ func LogoutEndpoint(c *fiber.Ctx) error {
 	auth.InvalidateCredentials(c)
 	return c.SendStatus(200)
 }
+
+/*
+Endpoint that returns 200 if logged in. Can be used to refresh credentials
+if needed.
+*/
+func RefreshEndpoint(c *fiber.Ctx) error {
+	return c.SendStatus(200)
+}
