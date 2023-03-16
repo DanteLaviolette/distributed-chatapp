@@ -3,15 +3,15 @@ module go.violettedev.com/eecs4222/backend
 go 1.20
 
 require (
-	go.violettedev.com/eecs4222/auth v1.0.0
-	go.violettedev.com/eecs4222/database v1.0.0
+	go.violettedev.com/eecs4222/shared/auth v1.0.0
+	go.violettedev.com/eecs4222/shared/database v1.0.0
 	go.violettedev.com/eecs4222/login v1.0.0
 	go.violettedev.com/eecs4222/registration v1.0.0
 )
 
 replace (
-	go.violettedev.com/eecs4222/auth => ./shared/auth
-	go.violettedev.com/eecs4222/database => ./shared/database
+	go.violettedev.com/eecs4222/shared/auth => ./shared/auth
+	go.violettedev.com/eecs4222/shared/database => ./shared/database
 	go.violettedev.com/eecs4222/login => ./login
 	go.violettedev.com/eecs4222/registration => ./registration
 )

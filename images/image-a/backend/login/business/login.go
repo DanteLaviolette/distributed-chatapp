@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"go.violettedev.com/eecs4222/auth"
 	"go.violettedev.com/eecs4222/login/persistence"
-	"go.violettedev.com/eecs4222/structs"
+	"go.violettedev.com/eecs4222/shared/auth"
+	"go.violettedev.com/eecs4222/shared/structs"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"

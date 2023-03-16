@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/shared/constants"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

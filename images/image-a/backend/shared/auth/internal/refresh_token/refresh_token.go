@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"time"
 
-	"go.violettedev.com/eecs4222/structs"
+	"go.violettedev.com/eecs4222/shared/structs"
 
-	"go.violettedev.com/eecs4222/auth/internal/dao"
-	"go.violettedev.com/eecs4222/auth/internal/token_util"
-	"go.violettedev.com/eecs4222/constants"
+	"go.violettedev.com/eecs4222/shared/auth/internal/dao"
+	"go.violettedev.com/eecs4222/shared/auth/internal/token_util"
+	"go.violettedev.com/eecs4222/shared/constants"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"

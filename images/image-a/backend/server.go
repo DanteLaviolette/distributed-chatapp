@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"go.violettedev.com/eecs4222/auth"
-	"go.violettedev.com/eecs4222/database"
+	"go.violettedev.com/eecs4222/shared/auth"
+	"go.violettedev.com/eecs4222/shared/database"
 
 	loginPresentation "go.violettedev.com/eecs4222/login/presentation"
 	registerPresentation "go.violettedev.com/eecs4222/registration/presentation"

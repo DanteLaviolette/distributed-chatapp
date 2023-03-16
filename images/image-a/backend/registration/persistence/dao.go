@@ -3,9 +3,9 @@ package persistence
 import (
 	"context"
 
-	"go.violettedev.com/eecs4222/constants"
-	"go.violettedev.com/eecs4222/database"
-	"go.violettedev.com/eecs4222/structs"
+	"go.violettedev.com/eecs4222/shared/constants"
+	"go.violettedev.com/eecs4222/shared/database"
+	"go.violettedev.com/eecs4222/shared/structs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

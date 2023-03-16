@@ -6,7 +6,7 @@ import (
 	"net/mail"
 
 	"go.violettedev.com/eecs4222/registration/persistence"
-	"go.violettedev.com/eecs4222/structs"
+	"go.violettedev.com/eecs4222/shared/structs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"

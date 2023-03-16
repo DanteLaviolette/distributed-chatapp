@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"go.violettedev.com/eecs4222/auth/internal/token_util"
-	"go.violettedev.com/eecs4222/constants"
-	"go.violettedev.com/eecs4222/structs"
+	"go.violettedev.com/eecs4222/shared/auth/internal/token_util"
+	"go.violettedev.com/eecs4222/shared/constants"
+	"go.violettedev.com/eecs4222/shared/structs"
 
 	"github.com/golang-jwt/jwt/v5"
 )

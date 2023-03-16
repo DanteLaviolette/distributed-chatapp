@@ -1,4 +1,4 @@
-module go.violettedev.com/eecs4222/structs
+module go.violettedev.com/eecs4222/shared/structs
 
 go 1.20
 

@@ -1,9 +1,9 @@
-module go.violettedev.com/eecs4222/database
+module go.violettedev.com/eecs4222/shared/database
 
 go 1.20
 
-require go.violettedev.com/eecs4222/constants v1.0.0
-replace go.violettedev.com/eecs4222/constants => ../constants
+require go.violettedev.com/eecs4222/shared/constants v1.0.0
+replace go.violettedev.com/eecs4222/shared/constants => ../constants
 
 require go.mongodb.org/mongo-driver v1.11.2
 

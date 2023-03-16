@@ -9,17 +9,17 @@ require (
 )
 
 require (
-	go.violettedev.com/eecs4222/auth v1.0.0
-	go.violettedev.com/eecs4222/constants v1.0.0
-	go.violettedev.com/eecs4222/database v1.0.0
-	go.violettedev.com/eecs4222/structs v1.0.0
+	go.violettedev.com/eecs4222/shared/auth v1.0.0
+	go.violettedev.com/eecs4222/shared/constants v1.0.0
+	go.violettedev.com/eecs4222/shared/database v1.0.0
+	go.violettedev.com/eecs4222/shared/structs v1.0.0
 )
 
 replace (
-	go.violettedev.com/eecs4222/auth => ../shared/auth
-	go.violettedev.com/eecs4222/constants => ../shared/constants
-	go.violettedev.com/eecs4222/database => ../shared/database
-	go.violettedev.com/eecs4222/structs => ../shared/structs
+	go.violettedev.com/eecs4222/shared/auth => ../shared/auth
+	go.violettedev.com/eecs4222/shared/constants => ../shared/constants
+	go.violettedev.com/eecs4222/shared/database => ../shared/database
+	go.violettedev.com/eecs4222/shared/structs => ../shared/structs
 )
 
 require (
