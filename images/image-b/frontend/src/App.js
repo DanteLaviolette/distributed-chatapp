@@ -1,6 +1,6 @@
 import { useState } from "react";
 import TopBar from "./TopBar/TopBar";
-import { getSignedInUser } from "./utils";
+import { getSignedInUser } from "./utils/utils";
 
 function App() {
   const [user, setUser] = useState(getSignedInUser())

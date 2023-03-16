@@ -4,7 +4,8 @@ import axios from "axios";
 import PropTypes from 'prop-types';
 import { useState } from "react";
 import constants from "../constants";
-import { getSignedInUser, validatePassword } from "../utils";
+import { getSignedInUser, validatePassword } from "../utils/utils";
+import authorizedAxios from "../utils/AuthInterceptor";
 
 Register.propTypes = {
     setUser: PropTypes.func
@@ -47,7 +48,7 @@ function Register(props) {
             "password": password,
         }).then(res => {
             // Success -- attempt to login
-            axios.post("/api/login", {
+            authorizedAxios.post("/api/login", {
                 "email": email,
                 "password": password
             }).finally(() => {

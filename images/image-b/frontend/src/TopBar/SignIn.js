@@ -1,9 +1,9 @@
 import { Box, Button, CircularProgress, FormControl, FormLabel, Input, Modal, ModalDialog, Typography } from "@mui/joy";
 import { Stack } from "@mui/system";
-import axios from "axios";
 import PropTypes from 'prop-types';
 import { useState } from "react";
-import { getSignedInUser } from "../utils";
+import authorizedAxios from "../utils/AuthInterceptor";
+import { getSignedInUser } from "../utils/utils";
 
 SignIn.propTypes = {
     setUser: PropTypes.func
@@ -28,7 +28,7 @@ function SignIn(props) {
         setErrorMessage("")
         setIsLoading(true)
         // Attempt to register
-        axios.post("/api/login", {
+        authorizedAxios.post("/api/login", {
             "email": email,
             "password": password,
         }).then(res => {

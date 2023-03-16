@@ -5,11 +5,11 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ClickAwayListener from '@mui/base/ClickAwayListener';
 import PopperUnstyled from '@mui/base/PopperUnstyled';
 import { useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { Stack } from "@mui/system";
 import constants from "../constants";
-import { validatePassword } from "../utils";
+import { validatePassword } from "../utils/utils";
+import authorizedAxios from "../utils/AuthInterceptor";
 
 ProfileMenu.propTypes = {
     user: PropTypes.object,
@@ -44,7 +44,7 @@ function ProfileMenu(props) {
 
     const handleLogout = () => {
         // Post to login endpoint
-        axios.post('/api/logout').then((res) => {
+        authorizedAxios.post('/api/logout').then((res) => {
             // Set user to null & close popup
             props.setUser(null)
             closePopup()
@@ -100,7 +100,7 @@ function ChangePasswordModal(props) {
             return
         }
         setIsLoading(true)
-        axios.post('/api/change_password', {
+        authorizedAxios.post('/api/change_password', {
             password
         }).then(res => {
             // Success -- close modal
