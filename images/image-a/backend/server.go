@@ -7,10 +7,12 @@ import (
 	"go.violettedev.com/eecs4222/shared/auth"
 	"go.violettedev.com/eecs4222/shared/database"
 
+	liveChatPresentation "go.violettedev.com/eecs4222/livechat/presentation"
 	loginPresentation "go.violettedev.com/eecs4222/login/presentation"
 	registerPresentation "go.violettedev.com/eecs4222/registration/presentation"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/joho/godotenv"
 )
 
@@ -40,6 +42,10 @@ func exposeEndpoints(app *fiber.App) {
 	app.Post("/api/logout", authProvider.IsAuthenticatedFiberMiddleware, loginPresentation.LogoutEndpoint)
 	app.Post("/api/register", registerPresentation.RegisterEndpoint)
 	app.Post("/api/change_password", authProvider.IsAuthenticatedFiberMiddleware, registerPresentation.ChangePasswordEndpoint)
+	// Chat websocket endpoint (populate w/ auth info if possible)
+	// TODO: What happens on refresh? Need to somehow send credentials?
+	app.Get("/ws/chat", liveChatPresentation.CanUpgradeToWebSocket,
+		websocket.New(liveChatPresentation.LiveChatWebSocket))
 }
 
 func main() {
