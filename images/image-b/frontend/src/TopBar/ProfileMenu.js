@@ -12,7 +12,7 @@ import { validatePassword } from "../utils/utils";
 import authorizedAxios from "../utils/AuthInterceptor";
 
 ProfileMenu.propTypes = {
-    user: PropTypes.object,
+    user: constants.USER_PROP_TYPE,
     setUser: PropTypes.func
 }
 

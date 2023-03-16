@@ -7,7 +7,6 @@ Returns the data of the auth token JWT if the user is signed in, null otherwise.
 export const getSignedInUser = () => {
     const auth = getAuthJWT();
     if (auth) {
-        console.log(auth)
         return jwtDecode(auth);
     }
     return null;

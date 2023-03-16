@@ -1,11 +1,12 @@
 import { Box, Typography } from "@mui/joy";
 import PropTypes from 'prop-types';
+import constants from "../constants";
 import ProfileMenu from "./ProfileMenu";
 import Register from "./Register";
 import SignIn from "./SignIn";
 
 TopBar.propTypes = {
-    user: PropTypes.object,
+    user: constants.USER_PROP_TYPE,
     setUser: PropTypes.func
 }
 
