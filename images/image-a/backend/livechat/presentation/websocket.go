@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"go.violettedev.com/eecs4222/livechat/structs"
 )
 
 func CanUpgradeToWebSocket(c *fiber.Ctx) error {
@@ -19,12 +20,13 @@ func CanUpgradeToWebSocket(c *fiber.Ctx) error {
 func LiveChatWebSocket(c *websocket.Conn) {
 	println("started")
 	for {
-		messageType, message, err := c.ReadMessage()
+		var message structs.Message
+		err := c.ReadJSON(&message)
 		if err != nil {
 			log.Print(err)
 			return
 		}
-		println(messageType, string(message))
-		c.WriteMessage(websocket.TextMessage, message)
+		log.Println(message)
+		c.WriteJSON(message)
 	}
 }
