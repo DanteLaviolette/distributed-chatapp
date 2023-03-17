@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"github.com/google/uuid"
 	"go.violettedev.com/eecs4222/livechat/business"
 	"go.violettedev.com/eecs4222/livechat/structs"
 )
@@ -18,14 +19,26 @@ func CanUpgradeToWebSocket(c *fiber.Ctx) error {
 }
 
 func LiveChatWebSocket(c *websocket.Conn) {
-	var authCtx *structs.AuthContext = &structs.AuthContext{}
+	// Create auth context -- setting uuid for SocketId
+	var authCtx *structs.AuthContext = &structs.AuthContext{
+		SocketId: uuid.NewString(),
+	}
+	// On connection close, remove connection
+	defer func() {
+		business.HandleConnectionClosed(authCtx)
+	}()
+	// Handle connection open
+	business.HandleConnectionOpened(c, authCtx)
+	// Handle messages
 	for {
+		// Parse message to JSON
 		var message structs.Message
 		err := c.ReadJSON(&message)
 		if err != nil {
 			log.Print(err)
 			return
 		}
+		// Call business layer based on message type
 		if message.Type == "ping" {
 			business.HandlePing(c, message.Content)
 		} else if message.Type == "auth" {

@@ -9,6 +9,16 @@ import (
 	"go.violettedev.com/eecs4222/shared/auth"
 )
 
+var socketIdsToConnection = make(map[string]*websocket.Conn)
+
+func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
+	socketIdsToConnection[authCtx.SocketId] = c
+}
+
+func HandleConnectionClosed(authCtx *structs.AuthContext) {
+	delete(socketIdsToConnection, authCtx.SocketId)
+}
+
 /*
 Handle authentication method:
 - add credentials to authCtx if signed in
@@ -39,14 +49,25 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 	name := authCtx.Name
 	email := authCtx.Email
 	if name != "" && email != "" {
-		ts := time.Now().UnixMilli()
-		c.WriteJSON(structs.ChatMessage{
+		// TODO: Write message to db
+		// TODO: Notify of messages via redis
+		message := structs.ChatMessage{
 			Type:    "message",
 			Message: content,
 			Name:    name,
 			Email:   email,
-			Ts:      ts,
-		})
+			Ts:      time.Now().UnixMilli(),
+		}
+		sendChatMessageToEveryone(message)
+	}
+}
+
+// Send a chat message to all websockets
+func sendChatMessageToEveryone(message structs.ChatMessage) {
+	for _, conn := range socketIdsToConnection {
+		if conn != nil {
+			conn.WriteJSON(message)
+		}
 	}
 }
 

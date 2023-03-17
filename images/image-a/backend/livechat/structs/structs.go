@@ -15,6 +15,7 @@ type ChatMessage struct {
 }
 
 type AuthContext struct {
-	Email string
-	Name  string
+	Email    string
+	Name     string
+	SocketId string
 }
