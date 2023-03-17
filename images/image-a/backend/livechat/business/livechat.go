@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
@@ -21,6 +23,10 @@ var redisClient *redis.Client
 var messagingPubSub *redis.PubSub
 var userCountPubSub *redis.PubSub
 
+var localAnonymousUserCount = 0
+var localAuthenticatedUserMap = make(map[string]int)
+var isCleanup = false
+
 // Initialized redis pub/sub for distributed messaging
 func InitializeDistributedMessaging() {
 	// Only initialize 1 instance
@@ -28,6 +34,7 @@ func InitializeDistributedMessaging() {
 		redisClient = cache.GetRedisClientSingleton()
 		setupMessagingPubSub()
 		setupUserCountPubSub()
+		go cleanupOnExit()
 	}
 }
 
@@ -69,7 +76,6 @@ func setupUserCountPubSub() {
 		// Handle subscription
 		for {
 			msg, err := userCountPubSub.ReceiveMessage(ctx)
-			log.Print(msg)
 			if err != nil {
 				panic(err)
 			}
@@ -92,13 +98,15 @@ func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
 
 // Removes socket from in-memory store & updates user count
 func HandleConnectionClosed(authCtx *structs.AuthContext) {
-	delete(socketIdsToConnection, authCtx.SocketId)
-	if authCtx.UserId != "" {
-		decrementAuthorizedUserCount(authCtx.UserId)
-	} else {
-		decrementAnonymousUserCount()
+	if !isCleanup {
+		delete(socketIdsToConnection, authCtx.SocketId)
+		if authCtx.UserId != "" {
+			decrementAuthorizedUserCount(authCtx.UserId)
+		} else {
+			decrementAnonymousUserCount()
+		}
+		publishUserCountMessage()
 	}
-	publishUserCountMessage()
 }
 
 /*
@@ -249,14 +257,17 @@ func incrementAnonymousUserCount() {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
 	redisClient.Incr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
+	// Locally increase count
+	localAnonymousUserCount += 1
 }
 
 // Decrements anonymous user count & notifies pub/sub
 func decrementAnonymousUserCount() {
-	log.Println("De anon")
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
 	redisClient.Decr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
+	// Locally reduce count
+	localAnonymousUserCount -= 1
 }
 
 // Increments authorized users count (by their id) & notifies pub/sub
@@ -265,6 +276,8 @@ func incrementAuthorizedUserCount(userId string) {
 	defer cancel()
 	// Increment users session count
 	redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, 1)
+	// Increment count for the user locally
+	localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] + 1
 }
 
 // Decrements authorized users count (by their id) & notifies pub/sub
@@ -278,8 +291,13 @@ func decrementAuthorizedUserCount(userId string) {
 		log.Print(err)
 	}
 	// Delete user if that was the last logout
-	if count == 0 {
+	if count <= 0 {
 		redisClient.HDel(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId)
+	}
+	// De-increment count for the user locally
+	localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] - 1
+	if localAuthenticatedUserMap[userId] <= 0 {
+		delete(localAuthenticatedUserMap, userId)
 	}
 }
 
@@ -327,4 +345,49 @@ func userCountMessageToJsonString(message structs.UserCountMessage) string {
 		return ""
 	}
 	return string(messageBytes)
+}
+
+// Removes the local user counts from the redis cache & publishes it
+func cleanupUserCount() {
+	// Clean up anonymous users
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	redisClient.DecrBy(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"), int64(localAnonymousUserCount))
+	// Clean up authorized users
+	for userId, count := range localAuthenticatedUserMap {
+		ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout*2)
+		defer cancel()
+		count, err := redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, int64(-1*count)).Result()
+		if err != nil {
+			log.Print(err)
+		}
+		// Delete user if that was the last logout
+		if count <= 0 {
+			redisClient.HDel(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId)
+		}
+	}
+	publishUserCountMessage()
+}
+
+/*
+Runs a background function to cleanup the database connection on
+exit.
+*/
+func cleanupOnExit() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	// Run exit func in background waiting for exit signal
+	go func() {
+		<-sigs
+		isCleanup = true
+		// Close all sockets so we can cleanup in peace
+		for _, conn := range socketIdsToConnection {
+			if conn != nil {
+				conn.Close()
+			}
+		}
+		// Clean up user count
+		cleanupUserCount()
+		os.Exit(0)
+	}()
 }

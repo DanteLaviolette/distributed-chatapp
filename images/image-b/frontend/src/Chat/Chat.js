@@ -71,12 +71,17 @@ function Chat({ user, setUser, setUserCount }) {
         }
     }, [])
 
-    // Attempt to reconnect after waiting 0.5s (to avoid spamming server)
-    const attemptReconnect = async () => {
-        // Reset values
+    const resetWebSocketValues = () => {
         setIsLoggedIn(false)
         setIsConnected(false)
         setUserCount(null)
+    }
+
+    // Attempt to reconnect after waiting 0.5s (to avoid spamming server)
+    const attemptReconnect = async () => {
+        // Reset values
+        resetWebSocketValues()
+        websocket.close()
         // Attempt reconnect
         await wait(500)
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
@@ -150,8 +155,9 @@ function Chat({ user, setUser, setUserCount }) {
                 const msg = JSON.parse(event.data)
                 messageHandler(msg)
             }
+            // Handle cleanup on error
+            websocket.onerror = resetWebSocketValues
             // Handle retry connection on close
-            websocket.onerror = attemptReconnect
             websocket.onclose = attemptReconnect
         }
     }, [websocket])

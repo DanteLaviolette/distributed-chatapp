@@ -3,9 +3,6 @@ package database
 import (
 	"context"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"go.violettedev.com/eecs4222/shared/constants"
@@ -47,8 +44,6 @@ func InitializeDBConnection(dbUrl string) {
 			log.Fatal(err)
 		}
 		log.Printf("Connected to MongoDB")
-		// Handle cleanup on exit
-		cleanupDBConnectionOnExit()
 		// Setup indices
 		setupIndices()
 	}
@@ -68,27 +63,6 @@ Returns the refresh token collection
 func GetRefreshTokenCollection() mongo.Collection {
 	return *(client.Database(databaseName).
 		Collection(refreshTokenCollectionName))
-}
-
-/*
-Runs a background function to cleanup the database connection on
-exit.
-*/
-func cleanupDBConnectionOnExit() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	// Run exit func in background waiting for exit signal
-	go func() {
-		<-sigs
-		// Create context
-		ctx, cancel := context.WithTimeout(context.Background(),
-			databaseInitializationTimeout)
-		// Disconnect client
-		client.Disconnect(ctx)
-		// Cleanup context
-		cancel()
-		os.Exit(0)
-	}()
 }
 
 /*
