@@ -10,6 +10,10 @@ import (
 	"go.violettedev.com/eecs4222/livechat/structs"
 )
 
+func InitializeDistributedMessaging() {
+	business.InitializeDistributedMessaging()
+}
+
 func CanUpgradeToWebSocket(c *fiber.Ctx) error {
 	if websocket.IsWebSocketUpgrade(c) {
 		c.Locals("allowed", true)

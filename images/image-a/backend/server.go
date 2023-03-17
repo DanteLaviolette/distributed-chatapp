@@ -54,6 +54,8 @@ func main() {
 	loadDevEnv()
 	// Initialize db connection
 	database.InitializeDBConnection(os.Getenv("MONGODB_URL"))
+	// Initialize distributed messaging
+	liveChatPresentation.InitializeDistributedMessaging()
 	// Initialize fiber (REST framework)
 	app := fiber.New()
 	exposeEndpoints(app)
