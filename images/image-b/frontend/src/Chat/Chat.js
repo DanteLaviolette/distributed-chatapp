@@ -11,7 +11,8 @@ let heartbeatInterval = null;
 
 Chat.propTypes = {
     user: constants.USER_PROP_TYPE,
-    setUser: PropTypes.func
+    setUser: PropTypes.func,
+    setUserCount: PropTypes.func
 }
 
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -52,7 +53,7 @@ const initializeHeartbeat = (websocket) => {
     }, 1000);
 }
 
-function Chat({ user, setUser }) {
+function Chat({ user, setUser, setUserCount }) {
     const [websocket, setWebSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -72,8 +73,11 @@ function Chat({ user, setUser }) {
 
     // Attempt to reconnect after waiting 0.5s (to avoid spamming server)
     const attemptReconnect = async () => {
+        // Reset values
         setIsLoggedIn(false)
         setIsConnected(false)
+        setUserCount(null)
+        // Attempt reconnect
         await wait(500)
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
     }
@@ -120,6 +124,11 @@ function Chat({ user, setUser }) {
                     message: msg.message,
                     subject: msg.subject
                 }].sort((a, b) => a.ts - b.ts)
+            })
+        } else if (msg.type === "user_count") {
+            setUserCount({
+                anonymousUsers: msg.anonymousUsers,
+                authorizedUsers: msg.authorizedUsers
             })
         }
     }

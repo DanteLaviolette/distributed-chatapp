@@ -188,6 +188,7 @@ func publishUserCountMessage() error {
 	}
 	// Create user count message string
 	userCountMessageString := userCountMessageToJsonString(structs.UserCountMessage{
+		Type:            "user_count",
 		AuthorizedUsers: authorizedUserCount,
 		AnonymousUsers:  anonymousUserCount,
 	})
