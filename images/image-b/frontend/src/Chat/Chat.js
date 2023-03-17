@@ -27,10 +27,10 @@ const generateRelativeWebSocketPath = (path) => {
 /*
 Sends a JSON w/ type & content to the websocket
 */
-const messageWebSocket = (websocket, type, content) => {
+const messageWebSocket = (websocket, type, subject, content) => {
     if (websocket && websocket.readyState === WebSocket.OPEN) {
         websocket.send(JSON.stringify({
-            type, content
+            type, content, subject
         }))
     }
 }
@@ -48,7 +48,7 @@ const initializeHeartbeat = (websocket) => {
         clearInterval(heartbeatInterval)
     }
     heartbeatInterval = window.setInterval(function () {
-        messageWebSocket(websocket, "ping", "")
+        messageWebSocket(websocket, "ping", "", "")
     }, 1000);
 }
 
@@ -79,13 +79,13 @@ function Chat({ user, setUser }) {
     }
 
     // Send a message to the websocket
-    const sendMessage = (message) => {
-        messageWebSocket(websocket, "message", message)
+    const sendMessage = (subject, message) => {
+        messageWebSocket(websocket, "message", subject, message)
     }
 
     // Send credentials to the websocket
     const sendAuthentication = () => {
-        messageWebSocket(websocket, "auth", getAuthJWT())
+        messageWebSocket(websocket, "auth", "", getAuthJWT())
     }
 
     // Handle initial websocket connection
@@ -117,7 +117,8 @@ function Chat({ user, setUser }) {
                     name: msg.name,
                     email: msg.email,
                     ts: msg.ts,
-                    message: msg.message
+                    message: msg.message,
+                    subject: msg.subject
                 }].sort((a, b) => a.ts - b.ts)
             })
         }

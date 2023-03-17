@@ -5,6 +5,7 @@ const messagePropType = PropTypes.shape({
     name: PropTypes.string,
     email: PropTypes.string,
     message: PropTypes.string,
+    subject: PropTypes.string,
     ts: PropTypes.number
 })
 
@@ -42,11 +43,12 @@ function Message({ message }) {
     return <Box sx={{ width: "100%", padding: "5px 10px 0px 10px", margin: "5px 0px 5px 0px" }}>
         <Box sx={{ display: "flex" }}>
             <Tooltip title={message.email} sx={{ width: 'fit-content' }}>
-                <Typography sx={{ color: 'neutral', width: 'fit-content' }}>{message.name}</Typography>
+                <Typography fontWeight="bold" sx={{ color: 'neutral', width: 'fit-content' }}>{message.name}</Typography>
             </Tooltip>
             <Box sx={{ flexGrow: 1, flexShrink: 1 }}></Box>
             <Typography level="body4" sx={{ color: 'neutral', width: 'fit-content' }}>{date}</Typography>
         </Box>
+        {message.subject !== "" && <Typography sx={{ color: 'neutral' }}>{message.subject}</Typography>}
         <Typography sx={{ color: 'neutral.300' }}>{message.message}</Typography>
     </Box>
 }

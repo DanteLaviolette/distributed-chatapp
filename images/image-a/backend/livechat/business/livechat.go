@@ -45,7 +45,7 @@ func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 }
 
 // Sends a message to all clients -- can only be performed by logged in users
-func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, content string) {
+func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject string, content string) {
 	name := authCtx.Name
 	email := authCtx.Email
 	if name != "" && email != "" {
@@ -53,6 +53,7 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 		// TODO: Notify of messages via redis
 		message := structs.ChatMessage{
 			Type:    "message",
+			Subject: subject,
 			Message: content,
 			Name:    name,
 			Email:   email,

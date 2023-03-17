@@ -44,7 +44,7 @@ func LiveChatWebSocket(c *websocket.Conn) {
 		} else if message.Type == "auth" {
 			business.HandleAuthMessage(c, authCtx, message.Content)
 		} else if message.Type == "message" {
-			business.HandleChatMessage(c, authCtx, message.Content)
+			business.HandleChatMessage(c, authCtx, message.Subject, message.Content)
 		}
 	}
 }

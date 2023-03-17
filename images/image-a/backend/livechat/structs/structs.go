@@ -4,10 +4,12 @@ package structs
 type Message struct {
 	Type    string `json:"type"`
 	Content string `json:"content"`
+	Subject string `json:"subject"`
 }
 
 type ChatMessage struct {
 	Type    string `json:"type"`
+	Subject string `json:"subject"`
 	Message string `json:"message"`
 	Name    string `json:"name"`
 	Email   string `json:"email"`
