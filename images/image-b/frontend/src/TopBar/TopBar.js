@@ -10,6 +10,8 @@ TopBar.propTypes = {
     setUser: PropTypes.func
 }
 
+// Top bar that shows the application name, along with a profile menu
+// if signed in, or a sign in & register button otherwise.
 function TopBar(props) {
     return (
         <Box height={constants.TOP_BAR_HEIGHT} width="100%" sx={{

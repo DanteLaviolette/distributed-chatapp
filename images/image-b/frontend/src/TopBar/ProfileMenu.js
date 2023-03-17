@@ -29,8 +29,8 @@ const Popup = styled(PopperUnstyled)({
 /*
 Button displaying users name, that shows a menu allowing them to logout
 or change their password.
-Note: I basically created the same thing for another project, so popup
-code is taken from:
+Note: I created the same thing for another project, so popup jsx
+is basically the same as:
 - https://github.com/EECS4481Project/frontend/blob/main/src/agent/dashboard/Dashboard.js
 */
 function ProfileMenu(props) {

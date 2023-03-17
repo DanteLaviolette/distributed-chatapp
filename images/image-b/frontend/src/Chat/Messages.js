@@ -16,6 +16,7 @@ Message.propTypes = {
     message: messagePropType
 }
 
+// Displays all of the given messages
 function Messages({ messages }) {
     return (
         <Box height="100%" width="100%" sx={{ overflow: "auto", display: 'flex', flexDirection: 'column-reverse' }}>
@@ -28,6 +29,7 @@ function Messages({ messages }) {
     );
 }
 
+// Component for a single message
 function Message({ message }) {
     const date = new Date(message.ts).toLocaleDateString('en-us', {
         year:"numeric",

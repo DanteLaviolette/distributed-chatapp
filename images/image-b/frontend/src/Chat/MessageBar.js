@@ -7,12 +7,18 @@ MessageBar.propTypes = {
     sendMessage: PropTypes.func,
     isLoggedIn: PropTypes.bool,
 }
+
+// Message bar that displays an input and send button
+// Input/button will be disabled if not logged in
 function MessageBar({ sendMessage, isLoggedIn }) {
     const [message, setMessage] = useState("")
+
     const handleMessageSend = (message) => {
+        // Send message & clear input
         sendMessage(message)
         setMessage("")
     }
+
     return (
         <Box height="50px" width="100%" sx={{display: "inline-flex", padding: "5px 10px 5px 10px", marginBottom: "5px"}}>
             <Input value={message}

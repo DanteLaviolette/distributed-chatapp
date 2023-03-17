@@ -1,6 +1,12 @@
+/*
+This is a common pattern I use for auth, so code is basically the same as
+another project I created:
+- https://github.com/EECS4481Project/frontend/blob/main/src/auth/RequestInterceptor.js
+*/
 import axios from 'axios';
 import { deleteAuthJWT, getAuthJWT, setAuthJWT } from './utils';
 import constants from '../constants'
+// Interceptor to be used for all requests that require authorization
 const authorizedAxios = axios.create();
 
 // Set auth token in request
