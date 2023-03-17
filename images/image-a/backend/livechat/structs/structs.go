@@ -16,8 +16,15 @@ type ChatMessage struct {
 	Ts      int64  `json:"ts"`
 }
 
+type UserCountMessage struct {
+	Type            string `json:"type"`
+	AuthorizedUsers int    `json:"authorizedUsers"`
+	AnonymousUsers  int    `json:"anonymousUsers"`
+}
+
 type AuthContext struct {
 	Email    string
 	Name     string
 	SocketId string
+	UserId   string
 }

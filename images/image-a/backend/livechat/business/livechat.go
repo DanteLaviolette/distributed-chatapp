@@ -18,51 +18,87 @@ import (
 
 var socketIdsToConnection = make(map[string]*websocket.Conn)
 var redisClient *redis.Client
-var pubsub *redis.PubSub
-
-const ANONYMOUS_USERS_REDIS_KEY = "anonymousUsers"
-const AUTHORIZED_USERS_REDIS_KEY = "authorizedUsers"
+var messagingPubSub *redis.PubSub
+var userCountPubSub *redis.PubSub
 
 // Initialized redis pub/sub for distributed messaging
 func InitializeDistributedMessaging() {
 	// Only initialize 1 instance
-	if pubsub == nil {
-		// Setup pubsub
-		ctx, cancel := context.WithCancel(context.Background())
+	if redisClient == nil {
 		redisClient = cache.GetRedisClientSingleton()
-		pubsub = redisClient.Subscribe(ctx, os.Getenv("REDIS_MESSAGING_CHANNEL"))
-		// Receive message in background
-		go func() {
-			// Cleanup redis client
-			defer pubsub.Close()
-			defer cancel()
-			// Handle subscription
-			for {
-				msg, err := pubsub.ReceiveMessage(ctx)
-				log.Print(msg)
-				if err != nil {
-					panic(err)
-				}
-				// On successful message recipient, send message
-				// to all connected users on this server
-				chatMessage := stringJsonToChatMessage(msg.Payload)
-				if chatMessage != nil {
-					sendChatMessageToEveryone(*chatMessage)
-				}
-			}
-		}()
+		setupMessagingPubSub()
+		setupUserCountPubSub()
 	}
 }
 
-// Store socket in memory -- required authCtx.socketId to be set
-func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
-	socketIdsToConnection[authCtx.SocketId] = c
+func setupMessagingPubSub() {
+	// Setup pubsub
+	ctx, cancel := context.WithCancel(context.Background())
+	messagingPubSub = redisClient.Subscribe(ctx, os.Getenv("REDIS_MESSAGING_CHANNEL"))
+	// Receive message in background
+	go func() {
+		// Cleanup redis client
+		defer messagingPubSub.Close()
+		defer cancel()
+		// Handle subscription
+		for {
+			msg, err := messagingPubSub.ReceiveMessage(ctx)
+			if err != nil {
+				panic(err)
+			}
+			// On successful message recipient, send message
+			// to all connected users on this server
+			chatMessage := stringJsonToChatMessage(msg.Payload)
+			if chatMessage != nil {
+				sendChatMessageToEveryone(*chatMessage)
+			}
+		}
+	}()
 }
 
-// Removes socket from in-memory store
+func setupUserCountPubSub() {
+	// Setup pubsub
+	ctx, cancel := context.WithCancel(context.Background())
+	redisClient = cache.GetRedisClientSingleton()
+	userCountPubSub = redisClient.Subscribe(ctx, os.Getenv("REDIS_USER_COUNT_CHANNEL"))
+	// Receive message in background
+	go func() {
+		// Cleanup redis client
+		defer userCountPubSub.Close()
+		defer cancel()
+		// Handle subscription
+		for {
+			msg, err := userCountPubSub.ReceiveMessage(ctx)
+			log.Print(msg)
+			if err != nil {
+				panic(err)
+			}
+			// On successful message recipient, send message
+			// to all connected users on this server
+			userCountMessage := stringJsonToUserCountMessage(msg.Payload)
+			if userCountMessage != nil {
+				sendUserCountMessageToEveryone(*userCountMessage)
+			}
+		}
+	}()
+}
+
+// Store socket in memory & update user count -- requires authCtx.socketId to be set
+func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
+	socketIdsToConnection[authCtx.SocketId] = c
+	incrementAnonymousUserCount()
+	publishUserCountMessage()
+}
+
+// Removes socket from in-memory store & updates user count
 func HandleConnectionClosed(authCtx *structs.AuthContext) {
 	delete(socketIdsToConnection, authCtx.SocketId)
-	// TODO: Notify redis
+	if authCtx.UserId != "" {
+		decrementAuthorizedUserCount(authCtx.UserId)
+	} else {
+		decrementAnonymousUserCount()
+	}
+	publishUserCountMessage()
 }
 
 /*
@@ -74,7 +110,7 @@ Handle authentication method:
 func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content string) {
 	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
 		os.Getenv("REFRESH_PRIVATE_KEY"))
-	name, email, err := authProvider.GetAuthContextWebSocket(c, content)
+	userId, name, email, err := authProvider.GetAuthContextWebSocket(c, content)
 	if err != nil && err.Error() == "refresh" {
 		// Request refresh
 		c.WriteJSON(structs.Message{
@@ -83,9 +119,14 @@ func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 	} else {
 		authCtx.Name = name
 		authCtx.Email = email
+		authCtx.UserId = userId
 		c.WriteJSON(structs.Message{
 			Type: "signed_in",
 		})
+		// Update user count -- was previously an unregistered user
+		decrementAnonymousUserCount()
+		incrementAuthorizedUserCount(userId)
+		publishUserCountMessage()
 	}
 	// Note: We don't send anything on no auth -- as it's default behavior
 }
@@ -135,11 +176,48 @@ func publishMessage(message structs.ChatMessage) error {
 	return nil
 }
 
+func publishUserCountMessage() error {
+	// Get counts
+	authorizedUserCount, err := getAuthorizedUserCount()
+	if err != nil {
+		return err
+	}
+	anonymousUserCount, err := getAnonymousUserCount()
+	if err != nil {
+		return err
+	}
+	// Create user count message string
+	userCountMessageString := userCountMessageToJsonString(structs.UserCountMessage{
+		AuthorizedUsers: authorizedUserCount,
+		AnonymousUsers:  anonymousUserCount,
+	})
+	if userCountMessageString == "" {
+		return errors.New("failed")
+	}
+	// Publish message
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	err = redisClient.Publish(ctx, os.Getenv("REDIS_USER_COUNT_CHANNEL"), userCountMessageString).Err()
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
 // Send a chat message to all websockets
 func sendChatMessageToEveryone(message structs.ChatMessage) {
 	for _, conn := range socketIdsToConnection {
 		if conn != nil {
 			conn.WriteJSON(message)
+		}
+	}
+}
+
+// Sends user chat message to all websockets
+func sendUserCountMessageToEveryone(userCountMessage structs.UserCountMessage) {
+	for _, conn := range socketIdsToConnection {
+		if conn != nil {
+			conn.WriteJSON(userCountMessage)
 		}
 	}
 }
@@ -157,6 +235,91 @@ func stringJsonToChatMessage(message string) *structs.ChatMessage {
 
 // Converts chat message to json string. Returns "" on error
 func chatMessageToJsonString(message structs.ChatMessage) string {
+	messageBytes, err := json.Marshal(message)
+	if err != nil {
+		log.Print(err)
+		return ""
+	}
+	return string(messageBytes)
+}
+
+// Increments anonymous user count & notifies pub/sub
+func incrementAnonymousUserCount() {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	redisClient.Incr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
+}
+
+// Decrements anonymous user count & notifies pub/sub
+func decrementAnonymousUserCount() {
+	log.Println("De anon")
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	redisClient.Decr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
+}
+
+// Increments authorized users count (by their id) & notifies pub/sub
+func incrementAuthorizedUserCount(userId string) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	// Increment users session count
+	redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, 1)
+}
+
+// Decrements authorized users count (by their id) & notifies pub/sub
+// User is only counted as removed once all their sockets are ended
+func decrementAuthorizedUserCount(userId string) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout*2)
+	defer cancel()
+	// Remove 1 from users session count
+	count, err := redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, -1).Result()
+	if err != nil {
+		log.Print(err)
+	}
+	// Delete user if that was the last logout
+	if count == 0 {
+		redisClient.HDel(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId)
+	}
+}
+
+// Returns anonymous user count on success. (-1, err) on failure
+func getAnonymousUserCount() (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	// Get value from cache
+	count, err := redisClient.Get(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Int()
+	if err != nil {
+		return -1, nil
+	}
+	return count, nil
+
+}
+
+// Returns authorized user count on success. (-1, err) on failure
+func getAuthorizedUserCount() (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
+	defer cancel()
+	// Get # of authorized users keys
+	count, err := redisClient.HLen(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY")).Result()
+	if err != nil {
+		return -1, nil
+	}
+	return int(count), nil
+}
+
+// Converts json string to user count msg. Returns nil on error.
+func stringJsonToUserCountMessage(message string) *structs.UserCountMessage {
+	var res structs.UserCountMessage
+	err := json.Unmarshal([]byte(message), &res)
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+	return &res
+}
+
+// Converts UserCountMessage to json string. Returns "" on error
+func userCountMessageToJsonString(message structs.UserCountMessage) string {
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
 		log.Print(err)

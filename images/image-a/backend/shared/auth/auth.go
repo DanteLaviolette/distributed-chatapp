@@ -46,9 +46,9 @@ type AuthProvider struct {
 	/*
 		Returns auth info if its valid.
 		Error "refresh" means the token is expired.
-		Returns: (name, email, error)
+		Returns: (id, name, email, error)
 	*/
-	GetAuthContextWebSocket func(*websocket.Conn, string) (string, string, error)
+	GetAuthContextWebSocket func(*websocket.Conn, string) (string, string, string, error)
 }
 
 func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
@@ -60,12 +60,12 @@ func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 			return generateAndSetAuthHeaderAndRefreshToken(user, c,
 				authPrivateKey, refreshPrivateKey) == nil
 		},
-		GetAuthContextWebSocket: func(c *websocket.Conn, authToken string) (string, string, error) {
+		GetAuthContextWebSocket: func(c *websocket.Conn, authToken string) (string, string, string, error) {
 			auth, err := getAuthContextWebSocket(c, authToken, authPrivateKey)
 			if err != nil {
-				return "", "", err
+				return "", "", "", err
 			}
-			return auth.Data.Name, auth.Data.Email, nil
+			return auth.Data.Id, auth.Data.Name, auth.Data.Email, nil
 		},
 	}
 }
