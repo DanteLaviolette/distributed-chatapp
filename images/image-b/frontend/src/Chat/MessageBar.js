@@ -59,7 +59,7 @@ function MessageBar({ sendMessage, isLoggedIn }) {
                 onChange={e => setMessage(e.target.value)}
                 onKeyDown={(ev) => {
                     // Handle sending message on enter
-                    if (ev.key === 'Enter') {
+                    if (ev.key === 'Enter' && message !== "" && isLoggedIn) {
                         ev.preventDefault();
                         handleMessageSend(subject, message)
                     }
