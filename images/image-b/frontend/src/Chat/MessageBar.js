@@ -29,16 +29,16 @@ function MessageBar({ sendMessage, isLoggedIn }) {
         placeholder={"Subject"}
         readOnly={!isLoggedIn}
         inputProps={{ maxLength: 12 }}
-        onFocus={(e) => {
+        onFocus={() => {
             // Enable focus styling of outer input on focus
             messageInput.current.classList.add("Joy-focused")
         }}
-        onBlur={(e) => {
+        onBlur={() => {
             // Disable focus styling of outer input on focus
             messageInput.current.classList.remove("Joy-focused")
         }}
         onKeyDown={(ev) => {
-            // Handle sending message on enter
+            // Handle moving focus on enter
             if (ev.key === 'Enter') {
                 ev.preventDefault();
                 // Move focus to the next input
