@@ -9,6 +9,8 @@ const constants = {
             name: PropTypes.string,
             email: PropTypes.string,
         })
-    })
+    }),
+    TOP_BAR_HEIGHT: "50px",
+    MESSAGE_BAR_HEIGHT: "55px",
 }
 export default constants

@@ -4,6 +4,8 @@ import constants from "../constants";
 import { Box } from "@mui/system";
 import { getAuthJWT } from "../utils/utils";
 import authorizedAxios from "../utils/AuthInterceptor";
+import Messages from "./Messages";
+import MessageBar from "./MessageBar";
 
 let heartbeatInterval = null;
 
@@ -48,6 +50,63 @@ const initializeHeartbeat = (websocket) => {
 function Chat({ user, setUser }) {
     const [websocket, setWebSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false)
+
+    const fakeMessages = [
+        {
+            name: "dante",
+            email: "abc@gmail.com",
+            message: "1",
+            ts: 1679025580872
+        },
+        {
+            name: "dante2",
+            email: "abc@gmail.com",
+            message: "2",
+            ts: 1679025580873
+        },
+        {
+            name: "dante3",
+            email: "abc@gmail.com",
+            message: "3",
+            ts: 1679025580875
+        },
+        {
+            name: "dante",
+            email: "abc@gmail.com",
+            message: "4",
+            ts: 1679025580872
+        },
+        {
+            name: "dante2",
+            email: "abc@gmail.com",
+            message: "5",
+            ts: 1679025580873
+        },
+        {
+            name: "dante3",
+            email: "abc@gmail.com",
+            message: "6",
+            ts: 1679025580875
+        },
+        {
+            name: "dante",
+            email: "abc@gmail.com",
+            message: "7",
+            ts: 1679025580872
+        },
+        {
+            name: "dante2",
+            email: "abc@gmail.com",
+            message: "8",
+            ts: 1679025580873
+        },
+        {
+            name: "dante3",
+            email: "abc@gmail.com",
+            message: "9",
+            ts: 1679025580875
+        },
+    ]
 
     // Setup websocket on page load
     useEffect(() => {
@@ -127,8 +186,10 @@ function Chat({ user, setUser }) {
     }, [user])
 
     return (
-        <Box sx={{ flexGrow: 1, flexShrink: 1 }}>
-            <p>Connected: {isConnected ? "true" : "false"}</p>
+        <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: `calc(100vh - ${constants.TOP_BAR_HEIGHT} - ${constants.MESSAGE_BAR_HEIGHT})` }}>
+            {/*<p>Connected: {isConnected ? "true" : "false"}</p>*/}
+            <Messages messages={fakeMessages} />
+            <MessageBar isLoggedIn={!!user}/>
         </Box>
     );
 }

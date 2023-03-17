@@ -12,7 +12,7 @@ TopBar.propTypes = {
 
 function TopBar(props) {
     return (
-        <Box height="50px" width="100%" sx={{
+        <Box height={constants.TOP_BAR_HEIGHT} width="100%" sx={{
             backgroundColor: 'background.level1',
             padding: "0px 10px 0px 10px", display: 'inline-flex', alignItems: 'center'
         }}>
