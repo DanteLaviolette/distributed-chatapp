@@ -5,11 +5,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"go.violettedev.com/eecs4222/livechat/business"
 	"go.violettedev.com/eecs4222/livechat/structs"
 )
 
 func CanUpgradeToWebSocket(c *fiber.Ctx) error {
-	println("hit")
 	if websocket.IsWebSocketUpgrade(c) {
 		c.Locals("allowed", true)
 		return c.Next()
@@ -18,7 +18,7 @@ func CanUpgradeToWebSocket(c *fiber.Ctx) error {
 }
 
 func LiveChatWebSocket(c *websocket.Conn) {
-	println("started")
+	var authCtx *structs.AuthContext = &structs.AuthContext{}
 	for {
 		var message structs.Message
 		err := c.ReadJSON(&message)
@@ -26,7 +26,10 @@ func LiveChatWebSocket(c *websocket.Conn) {
 			log.Print(err)
 			return
 		}
-		log.Println(message)
-		c.WriteJSON(message)
+		if message.Type == "ping" {
+			business.HandlePing(c, message.Content)
+		} else if message.Type == "auth" {
+			business.HandleAuthMessage(c, authCtx, message.Content)
+		}
 	}
 }

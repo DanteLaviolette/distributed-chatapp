@@ -15,11 +15,14 @@ import (
 	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 const AUTH_HEADER_NAME = "authorization"
 const REFRESH_COOKIE_NAME = "refresh"
+
+const REFRESH_NEEDED_WS_ERROR = "refresh"
 
 // Local keys
 const LOCALS_USER_ID = "userId"
@@ -40,6 +43,12 @@ type AuthProvider struct {
 		Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
 	*/
 	IsAuthenticatedFiberMiddleware func(*fiber.Ctx) error
+	/*
+		Returns auth info if its valid.
+		Error "refresh" means the token is expired.
+		Returns: (name, email, error)
+	*/
+	GetAuthContextWebSocket func(*websocket.Conn, string) (string, string, error)
 }
 
 func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
@@ -50,6 +59,13 @@ func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 		GenerateAndSetCredentials: func(user schema.UserSchema, c *fiber.Ctx) bool {
 			return generateAndSetAuthHeaderAndRefreshToken(user, c,
 				authPrivateKey, refreshPrivateKey) == nil
+		},
+		GetAuthContextWebSocket: func(c *websocket.Conn, authToken string) (string, string, error) {
+			auth, err := getAuthContextWebSocket(c, authToken, authPrivateKey)
+			if err != nil {
+				return "", "", err
+			}
+			return auth.Data.Name, auth.Data.Email, nil
 		},
 	}
 }
@@ -124,6 +140,21 @@ func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
 	} else {
 		return c.SendStatus(failUnauthenticatedRequest(c))
 	}
+}
+
+/*
+Returns auth info, or error if there is no (or invalid) auth info.
+Error "refresh" means the token is expired.
+*/
+func getAuthContextWebSocket(c *websocket.Conn, authTokenString string,
+	authPrivateKey string) (*structs.AuthTokenClaim, error) {
+	authToken, err := auth_token.ParseAuthToken(authTokenString, authPrivateKey)
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		return nil, errors.New(REFRESH_NEEDED_WS_ERROR)
+	} else if err != nil {
+		return nil, err
+	}
+	return authToken, nil
 }
 
 /*

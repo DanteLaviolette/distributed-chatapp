@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
+import PropTypes from 'prop-types';
 import constants from "../constants";
 import { Box } from "@mui/system";
+import { getAuthJWT } from "../utils/utils";
+import authorizedAxios from "../utils/AuthInterceptor";
 
 let heartbeatInterval = null;
 
 Chat.propTypes = {
-    user: constants.USER_PROP_TYPE
+    user: constants.USER_PROP_TYPE,
+    setUser: PropTypes.func
 }
+
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
 /*
 Returns a ws url with the given path (ie. /xyz)
@@ -39,8 +45,9 @@ const initializeHeartbeat = (websocket) => {
     }, 1000);
 }
 
-function Chat() {
+function Chat({ user, setUser }) {
     const [websocket, setWebSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false)
 
     // Setup websocket on page load
     useEffect(() => {
@@ -48,38 +55,80 @@ function Chat() {
         // On teardown, close connection & clear heartbeat interval
         return () => {
             clearInterval(heartbeatInterval)
-            websocket.close()
+            if (websocket) {
+                websocket.close()
+            }
         }
     }, [])
+
+    // Attempt to reconnect after waiting 0.5s (to avoid spamming server)
+    const attemptReconnect = async () => {
+        setIsConnected(false)
+        await wait(500)
+        setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
+    }
+
+    const sendAuthentication = () => {
+        sendJSON(websocket, {
+            type: 'auth',
+            content: getAuthJWT()
+        })
+    }
+
+    const messageHandler = (type, content) => {
+        if (type === "refresh") {
+            authorizedAxios.get("/api/refresh_credentials").then(() => {
+                // Refresh successful, re-auth with socket
+                sendAuthentication();
+            }).catch(() => {
+                // Refresh failed
+                setUser(null);
+            })
+        } else if (type === "signed_in") {
+            // TODO: Enable messaging
+        }
+    }
 
     // Setup web socket 
     useEffect(() => {
         if (websocket) {
-            console.log(websocket.readyState)
-            initializeHeartbeat(websocket)
+            // Handle open
             websocket.onopen = () => {
-                console.log('opened')
+                setIsConnected(true)
+                // Send credentials if logged in
+                if (user) {
+                    sendAuthentication();
+                }
             }
 
+            // Initialize heartbeat
+            initializeHeartbeat(websocket)
+
+            // handle message
             websocket.onmessage = (event) => {
-                const msg = event.data
-                console.log(msg)
+                const msg = JSON.parse(event.data)
+                messageHandler(msg.type, msg.content)
             }
-
-            websocket.onerror = () => {
-                // Attempt to reconnect
-                setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
-            }
-            websocket.onclose = () => {
-                // Attempt to reconnect
-                setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
-            }
+            // Handle retry connection on close
+            websocket.onerror = attemptReconnect
+            websocket.onclose = attemptReconnect
         }
     }, [websocket])
 
+    // Send updated credentials on user change or restart session on logout
+    useEffect(() => {
+        if (user) {
+            sendAuthentication();
+        } else {
+            if (websocket && websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.close()
+            }
+        }
+    }, [user])
+
     return (
         <Box sx={{ flexGrow: 1, flexShrink: 1 }}>
-            <p>Hello World!</p>
+            <p>Connected: {isConnected ? "true" : "false"}</p>
         </Box>
     );
 }
