@@ -29,7 +29,7 @@ function MessageBar({ sendMessage, isLoggedIn }) {
                     // Handle sending message on enter
                     if (ev.key === 'Enter') {
                       ev.preventDefault();
-                      handleMessageSend()
+                      handleMessageSend(message)
                     }
                   }}
                 sx={{flexGrow: 1, flexShrink: 1, marginRight: "10px"}}>

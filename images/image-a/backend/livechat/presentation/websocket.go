@@ -30,6 +30,8 @@ func LiveChatWebSocket(c *websocket.Conn) {
 			business.HandlePing(c, message.Content)
 		} else if message.Type == "auth" {
 			business.HandleAuthMessage(c, authCtx, message.Content)
+		} else if message.Type == "message" {
+			business.HandleChatMessage(c, authCtx, message.Content)
 		}
 	}
 }

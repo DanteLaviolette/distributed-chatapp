@@ -25,12 +25,19 @@ const generateRelativeWebSocketPath = (path) => {
 }
 
 /*
-Sends a JSON to the websocket
+Sends a JSON w/ type & content to the websocket
 */
-const sendJSON = (websocket, json) => {
+const messageWebSocket = (websocket, type, content) => {
     if (websocket && websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify(json))
+        websocket.send(JSON.stringify({
+            type, content
+        }))
     }
+}
+
+// Returns true if the websocket is open, false otherwise
+const isWebSocketOpen = (websocket) => {
+    return websocket && websocket.readyState === WebSocket.OPEN
 }
 
 /*
@@ -41,72 +48,15 @@ const initializeHeartbeat = (websocket) => {
         clearInterval(heartbeatInterval)
     }
     heartbeatInterval = window.setInterval(function () {
-        sendJSON(websocket, {
-            type: "ping"
-        })
+        messageWebSocket(websocket, "ping", "")
     }, 1000);
 }
 
 function Chat({ user, setUser }) {
     const [websocket, setWebSocket] = useState(null);
-    const [isConnected, setIsConnected] = useState(false)
-
-    const fakeMessages = [
-        {
-            name: "dante",
-            email: "abc@gmail.com",
-            message: "1",
-            ts: 1679025580872
-        },
-        {
-            name: "dante2",
-            email: "abc@gmail.com",
-            message: "2",
-            ts: 1679025580873
-        },
-        {
-            name: "dante3",
-            email: "abc@gmail.com",
-            message: "3",
-            ts: 1679025580875
-        },
-        {
-            name: "dante",
-            email: "abc@gmail.com",
-            message: "4",
-            ts: 1679025580872
-        },
-        {
-            name: "dante2",
-            email: "abc@gmail.com",
-            message: "5",
-            ts: 1679025580873
-        },
-        {
-            name: "dante3",
-            email: "abc@gmail.com",
-            message: "6",
-            ts: 1679025580875
-        },
-        {
-            name: "dante",
-            email: "abc@gmail.com",
-            message: "7",
-            ts: 1679025580872
-        },
-        {
-            name: "dante2",
-            email: "abc@gmail.com",
-            message: "8",
-            ts: 1679025580873
-        },
-        {
-            name: "dante3",
-            email: "abc@gmail.com",
-            message: "9",
-            ts: 1679025580875
-        },
-    ]
+    const [isConnected, setIsConnected] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [messages, setMessages] = useState([]);
 
     // Setup websocket on page load
     useEffect(() => {
@@ -122,20 +72,34 @@ function Chat({ user, setUser }) {
 
     // Attempt to reconnect after waiting 0.5s (to avoid spamming server)
     const attemptReconnect = async () => {
+        setIsLoggedIn(false)
         setIsConnected(false)
         await wait(500)
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
     }
 
-    const sendAuthentication = () => {
-        sendJSON(websocket, {
-            type: 'auth',
-            content: getAuthJWT()
-        })
+    // Send a message to the websocket
+    const sendMessage = (message) => {
+        messageWebSocket(websocket, "message", message)
     }
 
-    const messageHandler = (type, content) => {
-        if (type === "refresh") {
+    // Send credentials to the websocket
+    const sendAuthentication = () => {
+        messageWebSocket(websocket, "auth", getAuthJWT())
+    }
+
+    // Handle initial websocket connection
+    const handleOnConnect = () => {
+        setIsConnected(true)
+        // Send credentials if logged in
+        if (user) {
+            sendAuthentication();
+        }
+    }
+
+    // Main websocket message handler
+    const messageHandler = (msg) => {
+        if (msg.type === "refresh") {
             authorizedAxios.get("/api/refresh_credentials").then(() => {
                 // Refresh successful, re-auth with socket
                 sendAuthentication();
@@ -143,30 +107,38 @@ function Chat({ user, setUser }) {
                 // Refresh failed
                 setUser(null);
             })
-        } else if (type === "signed_in") {
-            // TODO: Enable messaging
+        } else if (msg.type === "signed_in") {
+            // Enable messaging
+            setIsLoggedIn(true)
+        } else if (msg.type === "message") {
+            // Received message, update array & sort by timestamp
+            setMessages((messages) => {
+                return [...messages, {
+                    name: msg.name,
+                    email: msg.email,
+                    ts: msg.ts,
+                    message: msg.message
+                }].sort((a, b) => a.ts - b.ts)
+            })
         }
     }
 
     // Setup web socket 
     useEffect(() => {
         if (websocket) {
-            // Handle open
-            websocket.onopen = () => {
-                setIsConnected(true)
-                // Send credentials if logged in
-                if (user) {
-                    sendAuthentication();
-                }
+            // If the websocket connects very fast, it will miss the onopen below
+            // so we force initial connection handling in this case
+            if (isWebSocketOpen(websocket)) {
+                handleOnConnect()
             }
-
+            // Handle open
+            websocket.onopen = handleOnConnect
             // Initialize heartbeat
             initializeHeartbeat(websocket)
-
-            // handle message
+            // handle message recipient
             websocket.onmessage = (event) => {
                 const msg = JSON.parse(event.data)
-                messageHandler(msg.type, msg.content)
+                messageHandler(msg)
             }
             // Handle retry connection on close
             websocket.onerror = attemptReconnect
@@ -188,8 +160,8 @@ function Chat({ user, setUser }) {
     return (
         <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: `calc(100vh - ${constants.TOP_BAR_HEIGHT} - ${constants.MESSAGE_BAR_HEIGHT})` }}>
             {/*<p>Connected: {isConnected ? "true" : "false"}</p>*/}
-            <Messages messages={fakeMessages} />
-            <MessageBar isLoggedIn={!!user}/>
+            <Messages messages={messages} />
+            <MessageBar isLoggedIn={isLoggedIn} sendMessage={sendMessage}/>
         </Box>
     );
 }
