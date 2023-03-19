@@ -31,42 +31,91 @@ const LOCALS_USER_EMAIL = "userEmail"
 const LOCALS_REFRESH_TOKEN_ID = "refreshTokenId"
 
 type AuthProvider struct {
-	/*
-		Generates and adds credentials to the response. Returns true on success,
-		false on failure.
-	*/
-	GenerateAndSetCredentials func(schema.UserSchema, *fiber.Ctx) bool
-	/*
-		To be used as fiber middleware. Proceeds if user is logged in (potentially
-		refreshing their credentials). Fails the request with 401 error if not logged
-		in.
-		Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
-	*/
-	IsAuthenticatedFiberMiddleware func(*fiber.Ctx) error
-	/*
-		Returns auth info if its valid.
-		Error "refresh" means the token is expired.
-		Returns: (id, name, email, error)
-	*/
-	GetAuthContextWebSocket func(*websocket.Conn, string) (string, string, string, error)
+	authPrivateKey    string
+	refreshPrivateKey string
 }
 
+/*
+Generates and adds credentials to the response. Returns true on success,
+false on failure.
+*/
+func (provider *AuthProvider) GenerateAndSetCredentials(user schema.UserSchema, c *fiber.Ctx) bool {
+	return generateAndSetAuthHeaderAndRefreshToken(user, c,
+		provider.authPrivateKey, provider.refreshPrivateKey) == nil
+}
+
+/*
+Returns auth info if its valid.
+Error "refresh" means the token is expired.
+Returns: (id, name, email, error)
+*/
+func (provider *AuthProvider) GetAuthContextWebSocket(c *websocket.Conn,
+	authToken string) (string, string, string, error) {
+	auth, err := getAuthContextWebSocket(c, authToken, provider.authPrivateKey)
+	if err != nil {
+		return "", "", "", err
+	}
+	return auth.Data.Id, auth.Data.Name, auth.Data.Email, nil
+}
+
+// Initializes auth provider
 func Initialize(authPrivateKey string, refreshPrivateKey string) *AuthProvider {
 	return &AuthProvider{
-		IsAuthenticatedFiberMiddleware: func(c *fiber.Ctx) error {
-			return isAuthenticatedFiberMiddleware(c, authPrivateKey, refreshPrivateKey)
-		},
-		GenerateAndSetCredentials: func(user schema.UserSchema, c *fiber.Ctx) bool {
-			return generateAndSetAuthHeaderAndRefreshToken(user, c,
-				authPrivateKey, refreshPrivateKey) == nil
-		},
-		GetAuthContextWebSocket: func(c *websocket.Conn, authToken string) (string, string, string, error) {
-			auth, err := getAuthContextWebSocket(c, authToken, authPrivateKey)
-			if err != nil {
-				return "", "", "", err
-			}
-			return auth.Data.Id, auth.Data.Name, auth.Data.Email, nil
-		},
+		authPrivateKey:    authPrivateKey,
+		refreshPrivateKey: refreshPrivateKey,
+	}
+}
+
+/*
+To be used as fiber middleware. Proceeds if user is logged in (potentially
+refreshing their credentials). Fails the request with 401 error if not logged
+in.
+Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
+*/
+func (provider *AuthProvider) IsAuthenticatedFiberMiddleware(c *fiber.Ctx) error {
+	// Get request credentials
+	authString, refreshString, err := getRequestCredentials(c)
+	if err != nil {
+		return c.SendStatus(failUnauthenticatedRequest(c))
+	}
+	// Parse refresh token
+	refreshToken, err := refresh_token.ParseRefreshToken(refreshString, provider.refreshPrivateKey)
+	if err != nil {
+		return c.SendStatus(failUnauthenticatedRequest(c))
+	}
+	// Parse auth token
+	authToken, err := auth_token.ParseAuthToken(authString, provider.authPrivateKey)
+	isAuthenticated := false // Assume token is invalid
+	// Refresh token if needed
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		// Expired auth token -- attempt to refresh token
+		authString, refreshString, err = refreshCredentials(c, refreshToken,
+			authToken, provider.authPrivateKey, provider.refreshPrivateKey)
+		// Handle case that refresh failed
+		if err != nil {
+			return c.SendStatus(failUnauthenticatedRequest(c))
+		}
+		// Refresh was successful -- set response credentials
+		setResponseCredentials(c, authString, refreshString)
+		// Parse updated tokens
+		refreshToken, err = refresh_token.ParseRefreshToken(refreshString, provider.refreshPrivateKey)
+		var err2 error
+		authToken, err2 = auth_token.ParseAuthToken(authString, provider.authPrivateKey)
+		if err != nil || err2 != nil {
+			return c.SendStatus(failUnauthenticatedRequest(c))
+		}
+		isAuthenticated = true
+	} else if err == nil && authToken != nil && refreshToken != nil {
+		// Success case where auth token is valid and not expired
+		isAuthenticated = true
+	}
+	if isAuthenticated {
+		// Populate locals
+		setFiberContextAuthLocals(c, *authToken, *refreshToken)
+		// Proceed with request
+		return c.Next()
+	} else {
+		return c.SendStatus(failUnauthenticatedRequest(c))
 	}
 }
 
@@ -85,60 +134,6 @@ func InvalidateCredentials(c *fiber.Ctx) {
 		refresh_token.InvalidateRefreshToken(refreshTokenIdString)
 	} else {
 		log.Println("Refresh token not found in locals")
-	}
-}
-
-/*
-To be used as fiber middleware. Proceeds if user is logged in (potentially
-refreshing their credentials). Fails the request with 401 error if not logged
-in.
-Upon success, adds userId, userName, userEmail & refreshTokenId to c.Locals
-*/
-func isAuthenticatedFiberMiddleware(c *fiber.Ctx, authPrivateKey string,
-	refreshPrivateKey string) error {
-	// Get request credentials
-	authString, refreshString, err := getRequestCredentials(c)
-	if err != nil {
-		return c.SendStatus(failUnauthenticatedRequest(c))
-	}
-	// Parse refresh token
-	refreshToken, err := refresh_token.ParseRefreshToken(refreshString, refreshPrivateKey)
-	if err != nil {
-		return c.SendStatus(failUnauthenticatedRequest(c))
-	}
-	// Parse auth token
-	authToken, err := auth_token.ParseAuthToken(authString, authPrivateKey)
-	isAuthenticated := false // Assume token is invalid
-	// Refresh token if needed
-	if errors.Is(err, jwt.ErrTokenExpired) {
-		// Expired auth token -- attempt to refresh token
-		authString, refreshString, err = refreshCredentials(c, refreshToken,
-			authToken, authPrivateKey, refreshPrivateKey)
-		// Handle case that refresh failed
-		if err != nil {
-			return c.SendStatus(failUnauthenticatedRequest(c))
-		}
-		// Refresh was successful -- set response credentials
-		setResponseCredentials(c, authString, refreshString)
-		// Parse updated tokens
-		refreshToken, err = refresh_token.ParseRefreshToken(refreshString, refreshPrivateKey)
-		var err2 error
-		authToken, err2 = auth_token.ParseAuthToken(authString, authPrivateKey)
-		if err != nil || err2 != nil {
-			return c.SendStatus(failUnauthenticatedRequest(c))
-		}
-		isAuthenticated = true
-	} else if err == nil && authToken != nil && refreshToken != nil {
-		// Success case where auth token is valid and not expired
-		isAuthenticated = true
-	}
-	if isAuthenticated {
-		// Populate locals
-		setFiberContextAuthLocals(c, *authToken, *refreshToken)
-		// Proceed with request
-		return c.Next()
-	} else {
-		return c.SendStatus(failUnauthenticatedRequest(c))
 	}
 }
 
@@ -185,7 +180,7 @@ func refreshCredentials(c *fiber.Ctx, refreshToken *structs.RefreshTokenClaim,
 	// Attempt to use refresh token
 	if !refresh_token.UseRefreshToken(refreshToken.Data.UserId,
 		refreshToken.Data.SecretId, refreshToken.Data.Secret) {
-		return "", "", errors.New("Failed to use refresh token")
+		return "", "", errors.New("failed to use refresh token")
 	}
 	// Refresh token used -- refresh credentials
 	refreshedAuthToken, err := auth_token.CreateAuthToken(authToken.Data.Email,
@@ -233,9 +228,7 @@ func setResponseCredentials(c *fiber.Ctx, authToken string, refreshJWT string) {
 	c.Cookie(createRefreshCookie(refreshJWT))
 }
 
-/*
-Creates a refresh cookie from the given JWT string
-*/
+// Creates a refresh cookie from the given JWT string
 func createRefreshCookie(refreshJWT string) *fiber.Cookie {
 	return &fiber.Cookie{
 		Name:     REFRESH_COOKIE_NAME,
@@ -246,9 +239,7 @@ func createRefreshCookie(refreshJWT string) *fiber.Cookie {
 	}
 }
 
-/*
-Adds userId, userName, userEmail & refreshTokenId to c.Locals
-*/
+// Adds userId, userName, userEmail & refreshTokenId to c.Locals
 func setFiberContextAuthLocals(c *fiber.Ctx, authToken structs.AuthTokenClaim,
 	refreshToken structs.RefreshTokenClaim) {
 	// Add auth token to context for user later
