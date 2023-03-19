@@ -24,7 +24,7 @@ var redisClient *redis.Client
 
 var localAnonymousUserCount = atomic.Int64{}
 
-// TODO: Not thread safe
+// Must use mutex during access for thread-safety
 var localAuthenticatedUserMap = make(map[string]int)
 var localAuthenticatedUserMutex = sync.Mutex{}
 
