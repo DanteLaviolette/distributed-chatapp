@@ -6,6 +6,7 @@ import { getAuthJWT } from "../utils/utils";
 import authorizedAxios from "../utils/AuthInterceptor";
 import Messages from "./Messages";
 import MessageBar from "./MessageBar";
+import { toast } from "react-toastify";
 
 let heartbeatInterval = null;
 
@@ -119,6 +120,9 @@ function Chat({ user, setUser, setUserCount }) {
         } else if (msg.type === "signed_in") {
             // Enable messaging
             setIsLoggedIn(true)
+        } else if (msg.type === "message_failed") {
+            // Notify of failed message
+            toast.error("Failed to send message", constants.TOAST_CONFIG)
         } else if (msg.type === "message") {
             // Received message, update array & sort by timestamp
             setMessages((messages) => {

@@ -12,5 +12,15 @@ const constants = {
     }),
     TOP_BAR_HEIGHT: "50px",
     MESSAGE_BAR_HEIGHT: "55px",
+    TOAST_CONFIG: {
+        position: "top-left",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+    }
 }
 export default constants
