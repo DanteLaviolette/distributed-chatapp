@@ -1,5 +1,7 @@
 package structs
 
+import "go.violettedev.com/eecs4222/shared/database/schema"
+
 // Struct used in socket communication
 type Message struct {
 	Type    string `json:"type"`
@@ -7,13 +9,10 @@ type Message struct {
 	Subject string `json:"subject"`
 }
 
+// Struct representing a chat message
 type ChatMessage struct {
-	Type    string `json:"type"`
-	Subject string `json:"subject"`
-	Message string `json:"message"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Ts      int64  `json:"ts"`
+	Type string `json:"type"`
+	schema.MessageSchema
 }
 
 type UserCountMessage struct {

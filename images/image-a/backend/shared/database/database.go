@@ -18,6 +18,7 @@ const databaseInitializationTimeout = 10 * time.Second
 const databaseName = "main"
 const userCollectionName = "Users"
 const refreshTokenCollectionName = "RefreshTokens"
+const messagesCollectionName = "Messages"
 
 /*
 Initialize the database connection.
@@ -63,6 +64,14 @@ Returns the refresh token collection
 func GetRefreshTokenCollection() mongo.Collection {
 	return *(client.Database(databaseName).
 		Collection(refreshTokenCollectionName))
+}
+
+/*
+Returns the messages collection
+*/
+func GetMessageCollection() mongo.Collection {
+	return *(client.Database(databaseName).
+		Collection(messagesCollectionName))
 }
 
 /*

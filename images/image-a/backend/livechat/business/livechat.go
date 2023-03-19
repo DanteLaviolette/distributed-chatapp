@@ -1,14 +1,18 @@
 package business
 
 import (
+	"log"
 	"os"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.violettedev.com/eecs4222/livechat/coordination/messaging"
 	"go.violettedev.com/eecs4222/livechat/coordination/user_count"
+	"go.violettedev.com/eecs4222/livechat/persistence"
 	"go.violettedev.com/eecs4222/livechat/structs"
 	"go.violettedev.com/eecs4222/shared/auth"
+	"go.violettedev.com/eecs4222/shared/database/schema"
 )
 
 var socketIdsToConnection = make(map[string]*websocket.Conn)
@@ -80,17 +84,36 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject 
 	name := authCtx.Name
 	email := authCtx.Email
 	if name != "" && email != "" {
-		// TODO: Write message to db
+		ts := time.Now()
 		message := structs.ChatMessage{
-			Type:    "message",
-			Subject: subject,
-			Message: content,
-			Name:    name,
-			Email:   email,
-			Ts:      time.Now().UnixMilli(),
+			Type: "message",
+			MessageSchema: schema.MessageSchema{
+				ID:      primitive.NewObjectIDFromTimestamp(ts),
+				Subject: subject,
+				Message: content,
+				Name:    name,
+				Email:   email,
+				Ts:      ts.UnixMilli(),
+			},
 		}
+		// Write message to DB
+		id, err := persistence.WriteMessage(message.MessageSchema)
+		if err != nil {
+			// Notify user of failed message
+			notifyFailure(c)
+			log.Print(err)
+			return
+		}
+		message.ID = id
 		// Publish message to all servers
-		messaging.PublishMessage(message)
+		err = messaging.PublishMessage(message)
+		if err != nil {
+			// Notify user of failed message
+			notifyFailure(c)
+		}
+	} else {
+		// Notify user of failed message
+		notifyFailure(c)
 	}
 }
 
@@ -98,5 +121,12 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject 
 func HandlePing(c *websocket.Conn, content string) {
 	c.WriteJSON(structs.Message{
 		Type: "pong",
+	})
+}
+
+// Notify connection of message that failed to send
+func notifyFailure(c *websocket.Conn) {
+	c.WriteJSON(structs.Message{
+		Type: "message_failed",
 	})
 }

@@ -19,3 +19,12 @@ type RefreshTokenSchema struct {
 	UserId string
 	Secret string
 }
+
+type MessageSchema struct {
+	ID      primitive.ObjectID `bson:"_id" json:"id"`
+	Subject string             `bson:"subject" json:"subject"`
+	Message string             `bson:"message" json:"message"`
+	Name    string             `bson:"name" json:"name"`
+	Email   string             `bson:"email" json:"email"`
+	Ts      int64              `bson:"ts" json:"ts"`
+}
