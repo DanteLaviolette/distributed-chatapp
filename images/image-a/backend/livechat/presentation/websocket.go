@@ -7,10 +7,12 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
 	"go.violettedev.com/eecs4222/livechat/business"
+	"go.violettedev.com/eecs4222/livechat/coordination"
 	"go.violettedev.com/eecs4222/livechat/structs"
 )
 
 func InitializeDistributedMessaging() {
+	coordination.InitializeThreadSafeSocketHandling()
 	business.InitializeDistributedMessaging()
 }
 
@@ -44,11 +46,11 @@ func LiveChatWebSocket(c *websocket.Conn) {
 		}
 		// Call business layer based on message type
 		if message.Type == "ping" {
-			business.HandlePing(c, message.Content)
+			business.HandlePing(authCtx, message.Content)
 		} else if message.Type == "auth" {
 			business.HandleAuthMessage(c, authCtx, message.Content)
 		} else if message.Type == "message" {
-			business.HandleChatMessage(c, authCtx, message.Subject, message.Content)
+			business.HandleChatMessage(authCtx, message.Subject, message.Content)
 		}
 	}
 }

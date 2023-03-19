@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.violettedev.com/eecs4222/livechat/coordination"
 	"go.violettedev.com/eecs4222/livechat/coordination/messaging"
 	"go.violettedev.com/eecs4222/livechat/coordination/user_count"
 	"go.violettedev.com/eecs4222/livechat/persistence"
@@ -15,17 +16,15 @@ import (
 	"go.violettedev.com/eecs4222/shared/database/schema"
 )
 
-var socketIdsToConnection = make(map[string]*websocket.Conn)
-
 // Initializes coordinators to handle distributed messaging
 func InitializeDistributedMessaging() {
-	messaging.SetupMessagingPubSub(&socketIdsToConnection)
-	user_count.SetupUserCountPubSub(&socketIdsToConnection)
+	messaging.SetupMessagingPubSub()
+	user_count.SetupUserCountPubSub()
 }
 
 // Store socket in memory & update user count -- requires authCtx.socketId to be set
 func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
-	socketIdsToConnection[authCtx.SocketId] = c
+	coordination.AddConnection(authCtx.SocketId, c)
 	// User joined, increment count
 	user_count.IncrementAnonymousUserCount()
 	user_count.PublishUserCountMessage()
@@ -35,7 +34,7 @@ func HandleConnectionOpened(c *websocket.Conn, authCtx *structs.AuthContext) {
 func HandleConnectionClosed(authCtx *structs.AuthContext) {
 	if !user_count.DidExit() {
 		// User left, decrement count (depending on auth status)
-		delete(socketIdsToConnection, authCtx.SocketId)
+		coordination.RemoveConnection(authCtx.SocketId)
 		if authCtx.UserId != "" {
 			user_count.DecrementAuthorizedUserCount(authCtx.UserId)
 		} else {
@@ -57,7 +56,7 @@ func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 	userId, name, email, err := authProvider.GetAuthContextWebSocket(c, content)
 	if err != nil && err.Error() == "refresh" {
 		// Request refresh
-		c.WriteJSON(structs.Message{
+		coordination.WriteMessage(authCtx.SocketId, structs.Message{
 			Type: "refresh",
 		})
 	} else {
@@ -65,7 +64,7 @@ func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 		authCtx.Name = name
 		authCtx.Email = email
 		authCtx.UserId = userId
-		c.WriteJSON(structs.Message{
+		coordination.WriteMessage(authCtx.SocketId, structs.Message{
 			Type: "signed_in",
 		})
 		// Update user count -- was previously counted as an anonymous user
@@ -80,7 +79,7 @@ func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content 
 // Sends a message to all clients -- can only be performed by logged in users
 // Uses redis pub/sub to notify all server instances of message (including the
 // current server)
-func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject string, content string) {
+func HandleChatMessage(authCtx *structs.AuthContext, subject string, content string) {
 	name := authCtx.Name
 	email := authCtx.Email
 	if name != "" && email != "" {
@@ -100,7 +99,7 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject 
 		id, err := persistence.WriteMessage(message.MessageSchema)
 		if err != nil {
 			// Notify user of failed message
-			notifyFailure(c)
+			notifyFailure(authCtx)
 			log.Print(err)
 			return
 		}
@@ -109,24 +108,24 @@ func HandleChatMessage(c *websocket.Conn, authCtx *structs.AuthContext, subject 
 		err = messaging.PublishMessage(message)
 		if err != nil {
 			// Notify user of failed message
-			notifyFailure(c)
+			notifyFailure(authCtx)
 		}
 	} else {
 		// Notify user of failed message
-		notifyFailure(c)
+		notifyFailure(authCtx)
 	}
 }
 
 // Send pong on ping recipient (heartbeat)
-func HandlePing(c *websocket.Conn, content string) {
-	c.WriteJSON(structs.Message{
+func HandlePing(authCtx *structs.AuthContext, content string) {
+	coordination.WriteMessage(authCtx.SocketId, structs.Message{
 		Type: "pong",
 	})
 }
 
 // Notify connection of message that failed to send
-func notifyFailure(c *websocket.Conn) {
-	c.WriteJSON(structs.Message{
+func notifyFailure(authCtx *structs.AuthContext) {
+	coordination.WriteMessage(authCtx.SocketId, structs.Message{
 		Type: "message_failed",
 	})
 }

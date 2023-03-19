@@ -9,19 +9,21 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.violettedev.com/eecs4222/livechat/cache"
+	"go.violettedev.com/eecs4222/livechat/coordination"
 	"go.violettedev.com/eecs4222/livechat/structs"
 	"go.violettedev.com/eecs4222/shared/constants"
 )
 
-var socketIdsToConnection *(map[string]*websocket.Conn)
-
 var userCountPubSub *redis.PubSub
 
 var redisClient *redis.Client
+
+// TODO: Not thread safe
 var localAnonymousUserCount = 0
+
+// TODO: Not thread safe
 var localAuthenticatedUserMap = make(map[string]int)
 var didExit = false
 
@@ -30,12 +32,11 @@ Sets up user count coordination between other instances.
 connectionMap is a pointer to a map containing [user_id, ws_connection]
 Must be called before any other functions in this class.
 */
-func SetupUserCountPubSub(connectionMap *map[string]*websocket.Conn) {
+func SetupUserCountPubSub() {
 	// Only run once
 	if redisClient == nil {
 		// Set local vars
 		redisClient = cache.GetRedisClientSingleton()
-		socketIdsToConnection = connectionMap
 		// Run cleanup code on exit
 		go cleanupOnExit()
 		// Setup pubsub
@@ -57,7 +58,7 @@ func SetupUserCountPubSub(connectionMap *map[string]*websocket.Conn) {
 				// to all connected users on this server
 				userCountMessage := stringJsonToUserCountMessage(msg.Payload)
 				if userCountMessage != nil {
-					sendUserCountMessageToEveryone(*userCountMessage)
+					coordination.MessageEveryone(userCountMessage)
 				}
 			}
 		}()
@@ -158,15 +159,6 @@ func DidExit() bool {
 	return didExit
 }
 
-// Sends user chat message to all websockets
-func sendUserCountMessageToEveryone(userCountMessage structs.UserCountMessage) {
-	for _, conn := range *socketIdsToConnection {
-		if conn != nil {
-			conn.WriteJSON(userCountMessage)
-		}
-	}
-}
-
 // Returns anonymous user count on success. (-1, err) on failure
 func getAnonymousUserCount() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
@@ -246,11 +238,7 @@ func cleanupOnExit() {
 		<-sigs
 		didExit = true
 		// Close all sockets so we can cleanup in peace
-		for _, conn := range *socketIdsToConnection {
-			if conn != nil {
-				conn.Close()
-			}
-		}
+		coordination.Cleanup()
 		// Clean up user count
 		cleanupUserCount()
 		os.Exit(0)

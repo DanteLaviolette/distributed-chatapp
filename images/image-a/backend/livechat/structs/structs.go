@@ -1,6 +1,8 @@
 package structs
 
-import "go.violettedev.com/eecs4222/shared/database/schema"
+import (
+	"go.violettedev.com/eecs4222/shared/database/schema"
+)
 
 // Struct used in socket communication
 type Message struct {
