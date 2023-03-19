@@ -1,6 +1,8 @@
 package coordination
 
 import (
+	"sync"
+
 	"github.com/gofiber/websocket/v2"
 )
 
@@ -15,7 +17,10 @@ type SocketMapChannelParams struct {
 }
 
 var socketMapChannel chan SocketMapChannelParams
+
+// Mutex must be used when accessing socketIdsToConnection for thread safety
 var socketIdsToConnection = make(map[string]*socketMutex)
+var socketIdsToConnectionMutex = sync.Mutex{}
 
 /*
 Initializes values for thread-safe
@@ -46,6 +51,8 @@ func RemoveConnection(socketId string) {
 Messages all current users in a separate go routines (thread-safe)
 */
 func MessageEveryone(message interface{}) {
+	socketIdsToConnectionMutex.Lock()
+	defer socketIdsToConnectionMutex.Unlock()
 	for socketId, socketInfo := range socketIdsToConnection {
 		if socketInfo != nil {
 			// Write message in different routine, as we don't have to wait
@@ -58,6 +65,8 @@ func MessageEveryone(message interface{}) {
 Closes all sockets and channels.
 */
 func Cleanup() {
+	socketIdsToConnectionMutex.Lock()
+	defer socketIdsToConnectionMutex.Unlock()
 	for _, socketInfo := range socketIdsToConnection {
 		if socketInfo != nil {
 			socketInfo.socket.Close()
@@ -70,7 +79,9 @@ func Cleanup() {
 Writes message to socket (thread-safe)
 */
 func WriteMessage(socketId string, message interface{}) {
+	socketIdsToConnectionMutex.Lock()
 	socketInfo := socketIdsToConnection[socketId]
+	socketIdsToConnectionMutex.Unlock()
 	if socketInfo != nil {
 		socketInfo.channel <- message
 	}
@@ -86,13 +97,17 @@ func handleConnections() {
 		if socketParams.Socket != nil {
 			// Create channel for the socket
 			socketChannel := make(chan interface{})
+			socketIdsToConnectionMutex.Lock()
 			socketIdsToConnection[socketParams.SocketId] = &socketMutex{socket: socketParams.Socket, channel: socketChannel}
+			socketIdsToConnectionMutex.Unlock()
 			go handleMessaging(socketChannel, socketParams.Socket)
 		} else {
 			// Close socket messaging channel
+			socketIdsToConnectionMutex.Lock()
 			close(socketIdsToConnection[socketParams.SocketId].channel)
 			// Delete value
 			delete(socketIdsToConnection, socketParams.SocketId)
+			socketIdsToConnectionMutex.Unlock()
 		}
 	}
 }
