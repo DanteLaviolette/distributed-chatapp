@@ -40,7 +40,8 @@ func SetupMessagingPubSub(connectionMap *map[string]*websocket.Conn) {
 			for {
 				msg, err := messagingPubSub.ReceiveMessage(ctx)
 				if err != nil {
-					panic(err)
+					log.Print(err)
+					continue
 				}
 				// On successful message recipient, send message
 				// to all connected users on this server

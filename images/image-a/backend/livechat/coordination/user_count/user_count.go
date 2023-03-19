@@ -50,7 +50,8 @@ func SetupUserCountPubSub(connectionMap *map[string]*websocket.Conn) {
 			for {
 				msg, err := userCountPubSub.ReceiveMessage(ctx)
 				if err != nil {
-					panic(err)
+					log.Print(err)
+					continue
 				}
 				// On successful message recipient, send message
 				// to all connected users on this server
@@ -89,7 +90,8 @@ func PublishUserCountMessage() error {
 	defer cancel()
 	err = redisClient.Publish(ctx, os.Getenv("REDIS_USER_COUNT_CHANNEL"), userCountMessageString).Err()
 	if err != nil {
-		panic(err)
+		log.Print(err)
+		return err
 	}
 	return nil
 }
@@ -98,18 +100,22 @@ func PublishUserCountMessage() error {
 func IncrementAnonymousUserCount() {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	redisClient.Incr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
-	// Locally increase count
-	localAnonymousUserCount += 1
+	err := redisClient.Incr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Err()
+	if err == nil {
+		// Locally increase count
+		localAnonymousUserCount += 1
+	}
 }
 
 // Decrements anonymous user count & notifies pub/sub
 func DecrementAnonymousUserCount() {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	redisClient.Decr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"))
-	// Locally reduce count
-	localAnonymousUserCount -= 1
+	err := redisClient.Decr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Err()
+	if err == nil {
+		// Locally reduce count
+		localAnonymousUserCount -= 1
+	}
 }
 
 // Increments authorized users count (by their id) & notifies pub/sub
@@ -117,9 +123,11 @@ func IncrementAuthorizedUserCount(userId string) {
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
 	// Increment users session count
-	redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, 1)
-	// Increment count for the user locally
-	localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] + 1
+	err := redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, 1).Err()
+	if err == nil {
+		// Increment count for the user locally
+		localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] + 1
+	}
 }
 
 // Decrements authorized users count (by their id) & notifies pub/sub
@@ -131,13 +139,15 @@ func DecrementAuthorizedUserCount(userId string) {
 	count, err := redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, -1).Result()
 	if err != nil {
 		log.Print(err)
+		return
+	} else {
+		// De-increment count for the user locally
+		localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] - 1
 	}
 	// Delete user if that was the last logout
 	if count <= 0 {
 		redisClient.HDel(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId)
 	}
-	// De-increment count for the user locally
-	localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] - 1
 	if localAuthenticatedUserMap[userId] <= 0 {
 		delete(localAuthenticatedUserMap, userId)
 	}
@@ -164,7 +174,7 @@ func getAnonymousUserCount() (int, error) {
 	// Get value from cache
 	count, err := redisClient.Get(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Int()
 	if err != nil {
-		return -1, nil
+		return -1, err
 	}
 	return count, nil
 
@@ -177,7 +187,7 @@ func getAuthorizedUserCount() (int, error) {
 	// Get # of authorized users keys
 	count, err := redisClient.HLen(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY")).Result()
 	if err != nil {
-		return -1, nil
+		return -1, err
 	}
 	return int(count), nil
 }
