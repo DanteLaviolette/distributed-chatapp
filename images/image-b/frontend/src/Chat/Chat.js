@@ -131,7 +131,8 @@ function Chat({ user, setUser, setUserCount }) {
                     email: msg.email,
                     ts: msg.ts,
                     message: msg.message,
-                    subject: msg.subject
+                    subject: msg.subject,
+                    id: msg.id
                 }].sort((a, b) => a.ts - b.ts)
             })
         } else if (msg.type === "user_count") {
