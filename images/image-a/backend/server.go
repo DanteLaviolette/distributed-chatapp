@@ -44,7 +44,6 @@ func exposeEndpoints(app *fiber.App) {
 	app.Post("/api/change_password", authProvider.IsAuthenticatedFiberMiddleware, registerPresentation.ChangePasswordEndpoint)
 	app.Get("/api/refresh_credentials", authProvider.IsAuthenticatedFiberMiddleware, loginPresentation.RefreshEndpoint)
 	// Chat websocket endpoint (populate w/ auth info if possible)
-	// TODO: What happens on refresh? Need to somehow send credentials?
 	app.Get("/ws/chat", liveChatPresentation.CanUpgradeToWebSocket,
 		websocket.New(liveChatPresentation.LiveChatWebSocket))
 }
