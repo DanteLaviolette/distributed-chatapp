@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/redis/go-redis/v9"
@@ -20,11 +22,12 @@ var userCountPubSub *redis.PubSub
 
 var redisClient *redis.Client
 
-// TODO: Not thread safe
-var localAnonymousUserCount = 0
+var localAnonymousUserCount = atomic.Int64{}
 
 // TODO: Not thread safe
 var localAuthenticatedUserMap = make(map[string]int)
+var localAuthenticatedUserMutex = sync.Mutex{}
+
 var didExit = false
 
 /*
@@ -104,7 +107,7 @@ func IncrementAnonymousUserCount() {
 	err := redisClient.Incr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Err()
 	if err == nil {
 		// Locally increase count
-		localAnonymousUserCount += 1
+		localAnonymousUserCount.Add(1)
 	}
 }
 
@@ -115,7 +118,7 @@ func DecrementAnonymousUserCount() {
 	err := redisClient.Decr(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY")).Err()
 	if err == nil {
 		// Locally reduce count
-		localAnonymousUserCount -= 1
+		localAnonymousUserCount.Add(-1)
 	}
 }
 
@@ -127,13 +130,17 @@ func IncrementAuthorizedUserCount(userId string) {
 	err := redisClient.HIncrBy(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId, 1).Err()
 	if err == nil {
 		// Increment count for the user locally
+		localAuthenticatedUserMutex.Lock()
 		localAuthenticatedUserMap[userId] = localAuthenticatedUserMap[userId] + 1
+		localAuthenticatedUserMutex.Unlock()
 	}
 }
 
 // Decrements authorized users count (by their id) & notifies pub/sub
 // User is only counted as removed once all their sockets are ended
 func DecrementAuthorizedUserCount(userId string) {
+	localAuthenticatedUserMutex.Lock()
+	defer localAuthenticatedUserMutex.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout*2)
 	defer cancel()
 	// Remove 1 from users session count
@@ -210,8 +217,9 @@ func cleanupUserCount() {
 	// Clean up anonymous users
 	ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout)
 	defer cancel()
-	redisClient.DecrBy(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"), int64(localAnonymousUserCount))
+	redisClient.DecrBy(ctx, os.Getenv("ANONYMOUS_USERS_REDIS_KEY"), localAnonymousUserCount.Load())
 	// Clean up authorized users
+	localAuthenticatedUserMutex.Lock()
 	for userId, count := range localAuthenticatedUserMap {
 		ctx, cancel := context.WithTimeout(context.Background(), constants.DatabaseTimeout*2)
 		defer cancel()
@@ -224,6 +232,7 @@ func cleanupUserCount() {
 			redisClient.HDel(ctx, os.Getenv("AUTHORIZED_USERS_REDIS_KEY"), userId)
 		}
 	}
+	localAuthenticatedUserMutex.Unlock()
 	PublishUserCountMessage()
 }
 
