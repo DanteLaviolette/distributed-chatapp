@@ -21,6 +21,7 @@ const constants = {
         draggable: true,
         progress: undefined,
         theme: "colored",
-    }
+    },
+    MS_TO_NS: 1000000
 }
 export default constants

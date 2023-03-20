@@ -1,5 +1,6 @@
 import { Box, Tooltip, Typography } from "@mui/joy";
 import PropTypes from 'prop-types';
+import constants from "../constants";
 
 const messagePropType = PropTypes.shape({
     name: PropTypes.string,
@@ -32,7 +33,8 @@ function Messages({ messages }) {
 
 // Component for a single message
 function Message({ message }) {
-    const date = new Date(message.ts).toLocaleDateString('en-us', {
+    const ts = Math.floor(message.ts / constants.MS_TO_NS)
+    const date = new Date(ts).toLocaleDateString('en-us', {
         year:"numeric",
         month:"short",
         day:"numeric",

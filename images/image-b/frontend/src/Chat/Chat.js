@@ -7,6 +7,8 @@ import authorizedAxios from "../utils/AuthInterceptor";
 import Messages from "./Messages";
 import MessageBar from "./MessageBar";
 import { toast } from "react-toastify";
+import axios from "axios";
+import { CircularProgress, Typography } from "@mui/joy";
 
 let heartbeatInterval = null;
 
@@ -57,9 +59,48 @@ const initializeHeartbeat = (websocket) => {
 function Chat({ user, setUser, setUserCount }) {
     const [websocket, setWebSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [hasLoadedInitialPage, setHasLoadedInitialPage] = useState(false)
+    const [errorOccured, setErrorOccured] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [messages, setMessages] = useState([]);
 
+    // Used to ensure duplicate messages aren't added from paging
+    const [messageIds, setMessageIds] = useState(new Set())
+
+    // TODO: Show status of connection (green or red bubble somewhere)
+    // TODO: Load paging on scroll to top of page -- should show loading sign
+    // TODO: Should also show "end of chat history" message once the top is reached
+
+    /**
+     * Adds the messages to the messages & messageIds state ensuring no duplicates
+     * as well as correct sort order
+     * @param {Array<String>} newMessages 
+     */
+    function updateMessages(newMessages) {
+        const updatedMessageIds = new Set(messageIds)
+        setMessages((messages) => {
+            // Create duplicate of message state
+            const res = [...messages]
+            // Add all non-existent newMessages to res
+            for (let i = 0; i < newMessages.length; i++) {
+                if (!updatedMessageIds.has(newMessages[i].id)) {
+                    res.push({
+                        name: newMessages[i].name,
+                        email: newMessages[i].email,
+                        ts: newMessages[i].ts,
+                        message: newMessages[i].message,
+                        subject: newMessages[i].subject,
+                        id: newMessages[i].id
+                    })
+                    updatedMessageIds.add(newMessages[i].id)
+                }
+            }
+            // Sort by timestamp & return res
+            return res.sort((a, b) => a.ts - b.ts)
+        })
+        // Update messageIds
+        setMessageIds(updatedMessageIds)
+    }
     // Setup websocket on page load
     useEffect(() => {
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
@@ -70,6 +111,16 @@ function Chat({ user, setUser, setUserCount }) {
                 websocket.close()
             }
         }
+    }, [])
+
+    // Load initial chat page on load
+    useEffect(() => {
+        axios.get("/api/messages", { params: { lastTimestamp: Date.now() * constants.MS_TO_NS} }).then(res => {
+            updateMessages(res.data)
+            setHasLoadedInitialPage(true);
+        }).catch(() => {
+            setErrorOccured(true)
+        })
     }, [])
 
     const resetWebSocketValues = () => {
@@ -124,17 +175,8 @@ function Chat({ user, setUser, setUserCount }) {
             // Notify of failed message
             toast.error("Failed to send message", constants.TOAST_CONFIG)
         } else if (msg.type === "message") {
-            // Received message, update array & sort by timestamp
-            setMessages((messages) => {
-                return [...messages, {
-                    name: msg.name,
-                    email: msg.email,
-                    ts: msg.ts,
-                    message: msg.message,
-                    subject: msg.subject,
-                    id: msg.id
-                }].sort((a, b) => a.ts - b.ts)
-            })
+            // Add message to state
+            updateMessages([msg])
         } else if (msg.type === "user_count") {
             setUserCount({
                 anonymousUsers: msg.anonymousUsers,
@@ -178,11 +220,25 @@ function Chat({ user, setUser, setUserCount }) {
         }
     }, [user])
 
+    // Display chat screen, error or loading message depending on state
+    let chatScreen = <>
+        <Messages messages={messages} />
+        <MessageBar isLoggedIn={isLoggedIn} sendMessage={sendMessage}/>
+        </>
+    if (errorOccured) {
+        chatScreen = <Box sx={{width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center"}}>
+            <Typography>Something went wrong. Please refresh the page.</Typography>
+        </Box>
+    } else if (!hasLoadedInitialPage) {
+        chatScreen = <Box sx={{width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"}}>
+            <CircularProgress size="md"/>
+            <Typography>Loading...</Typography>
+    </Box>
+    }
+
     return (
         <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: `calc(100vh - ${constants.TOP_BAR_HEIGHT} - ${constants.MESSAGE_BAR_HEIGHT})` }}>
-            {/*<p>Connected: {isConnected ? "true" : "false"}</p>*/}
-            <Messages messages={messages} />
-            <MessageBar isLoggedIn={isLoggedIn} sendMessage={sendMessage}/>
+            {chatScreen}
         </Box>
     );
 }
