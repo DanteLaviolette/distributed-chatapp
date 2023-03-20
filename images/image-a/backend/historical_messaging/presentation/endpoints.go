@@ -3,10 +3,10 @@ package presentation
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"go.violettedev.com/eecs4222/historical_messaging/business"
-	"go.violettedev.com/eecs4222/historical_messaging/structs"
 )
 
 /*
@@ -16,13 +16,14 @@ Page endpoint for getting a page of messages. Takes PageRequest as input.
 - 200 with json of messages on success
 */
 func GetMessagesEndpoint(c *fiber.Ctx) error {
-	// Parse body to struct
-	var pageRequest structs.PageRequest
-	if err := c.BodyParser(&pageRequest); err != nil {
+	// Parse query param
+	lastTimestampString := c.Query("lastTimestamp", "0")
+	lastTimestamp, err := strconv.ParseInt(lastTimestampString, 10, 64)
+	if err != nil {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 	// Get messages
-	messages, err := business.GetMessages(pageRequest)
+	messages, err := business.GetMessages(lastTimestamp)
 	if err != nil {
 		return c.SendStatus(http.StatusInternalServerError)
 	}
