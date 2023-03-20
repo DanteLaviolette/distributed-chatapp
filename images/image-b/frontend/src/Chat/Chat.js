@@ -222,7 +222,7 @@ function Chat({ user, setUser, setUserCount }) {
 
     // Display chat screen, error or loading message depending on state
     let chatScreen = <>
-        <Messages messages={messages} />
+        <Messages messages={messages} updateMessages={updateMessages} />
         <MessageBar isLoggedIn={isLoggedIn} sendMessage={sendMessage}/>
         </>
     if (errorOccured) {
@@ -237,7 +237,7 @@ function Chat({ user, setUser, setUserCount }) {
     }
 
     return (
-        <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: `calc(100vh - ${constants.TOP_BAR_HEIGHT} - ${constants.MESSAGE_BAR_HEIGHT})` }}>
+        <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: `calc(100vh - ${constants.TOP_BAR_HEIGHT}px - ${constants.MESSAGE_BAR_HEIGHT})` }}>
             {chatScreen}
         </Box>
     );

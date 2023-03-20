@@ -10,7 +10,7 @@ const constants = {
             email: PropTypes.string,
         })
     }),
-    TOP_BAR_HEIGHT: "50px",
+    TOP_BAR_HEIGHT: 50,
     MESSAGE_BAR_HEIGHT: "55px",
     TOAST_CONFIG: {
         position: "top-left",
