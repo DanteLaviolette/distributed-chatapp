@@ -82,6 +82,7 @@ Sets up the indices on the table if they don't yet exist
 func setupIndices() {
 	createUserIndices()
 	createRefreshTokenIndices()
+	createMessageIndex()
 }
 
 /*
@@ -136,6 +137,30 @@ func createRefreshTokenIndices() {
 	// Add index to refresh token collection
 	col := GetRefreshTokenCollection()
 	_, err := col.Indexes().CreateMany(ctx, indexModels)
+	// Fail if error occurred
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+/*
+Creates message indexes:
+- db.messages.createIndex( { "ts": 1 } )
+*/
+func createMessageIndex() {
+	// Define index
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"ts": 1, // index in ascending order
+		},
+	}
+	// Create context
+	ctx, cancel := context.WithTimeout(context.Background(),
+		databaseInitializationTimeout)
+	defer cancel()
+	// Add index to user collection
+	col := GetMessageCollection()
+	_, err := col.Indexes().CreateOne(ctx, indexModel)
 	// Fail if error occurred
 	if err != nil {
 		log.Fatal(err)
