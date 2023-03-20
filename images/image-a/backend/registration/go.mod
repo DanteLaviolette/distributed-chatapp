@@ -22,6 +22,8 @@ replace (
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/fasthttp/websocket v1.5.1 // indirect
+	github.com/gofiber/websocket/v2 v2.1.4 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect

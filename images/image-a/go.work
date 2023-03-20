@@ -5,6 +5,7 @@ use (
 	./backend/login
 	./backend/registration
 	./backend/livechat
+	./backend/historical_messaging
 	./backend/shared/database
 	./backend/shared/auth
 )

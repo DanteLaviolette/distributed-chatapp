@@ -14,6 +14,7 @@ replace (
 
 require (
 	github.com/gofiber/fiber/v2 v2.42.0
+	github.com/gofiber/websocket/v2 v2.1.4
 	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1
 	go.mongodb.org/mongo-driver v1.11.2
 	golang.org/x/crypto v0.7.0
@@ -21,6 +22,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/fasthttp/websocket v1.5.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
