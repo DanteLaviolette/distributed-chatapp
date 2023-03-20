@@ -93,7 +93,7 @@ func HandleChatMessage(authCtx *structs.AuthContext, subject string, content str
 				Message: content,
 				Name:    name,
 				Email:   email,
-				Ts:      ts.UnixMilli(),
+				Ts:      ts.UnixNano(),
 			},
 		}
 		// Write message to DB
