@@ -7,9 +7,9 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.violettedev.com/eecs4222/livechat/coordination"
-	"go.violettedev.com/eecs4222/livechat/coordination/messaging"
-	"go.violettedev.com/eecs4222/livechat/coordination/user_count"
+	"go.violettedev.com/eecs4222/livechat/business/coordination"
+	"go.violettedev.com/eecs4222/livechat/business/coordination/messaging"
+	"go.violettedev.com/eecs4222/livechat/business/coordination/user_count"
 	"go.violettedev.com/eecs4222/livechat/persistence"
 	"go.violettedev.com/eecs4222/livechat/structs"
 	"go.violettedev.com/eecs4222/shared/auth"
@@ -18,6 +18,7 @@ import (
 
 // Initializes coordinators to handle distributed messaging
 func InitializeDistributedMessaging() {
+	coordination.InitializeThreadSafeSocketHandling()
 	messaging.SetupMessagingPubSub()
 	user_count.SetupUserCountPubSub()
 }

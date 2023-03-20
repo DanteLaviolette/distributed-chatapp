@@ -7,12 +7,10 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
 	"go.violettedev.com/eecs4222/livechat/business"
-	"go.violettedev.com/eecs4222/livechat/coordination"
 	"go.violettedev.com/eecs4222/livechat/structs"
 )
 
 func InitializeDistributedMessaging() {
-	coordination.InitializeThreadSafeSocketHandling()
 	business.InitializeDistributedMessaging()
 }
 

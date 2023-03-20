@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/redis/go-redis/v9"
+	"go.violettedev.com/eecs4222/livechat/business/coordination"
 	"go.violettedev.com/eecs4222/livechat/cache"
-	"go.violettedev.com/eecs4222/livechat/coordination"
 	"go.violettedev.com/eecs4222/livechat/structs"
 	"go.violettedev.com/eecs4222/shared/constants"
 )
