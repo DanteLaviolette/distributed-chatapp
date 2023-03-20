@@ -7,6 +7,7 @@ import (
 	"go.violettedev.com/eecs4222/shared/auth"
 	"go.violettedev.com/eecs4222/shared/database"
 
+	historicalMessagesPresentation "go.violettedev.com/eecs4222/historical_messaging/presentation"
 	liveChatPresentation "go.violettedev.com/eecs4222/livechat/presentation"
 	loginPresentation "go.violettedev.com/eecs4222/login/presentation"
 	registerPresentation "go.violettedev.com/eecs4222/registration/presentation"
@@ -43,9 +44,11 @@ func exposeEndpoints(app *fiber.App) {
 	app.Post("/api/register", registerPresentation.RegisterEndpoint)
 	app.Post("/api/change_password", authProvider.IsAuthenticatedFiberMiddleware, registerPresentation.ChangePasswordEndpoint)
 	app.Get("/api/refresh_credentials", authProvider.IsAuthenticatedFiberMiddleware, loginPresentation.RefreshEndpoint)
+	app.Get("/api/messages", historicalMessagesPresentation.GetMessagesEndpoint)
 	// Chat websocket endpoint (populate w/ auth info if possible)
 	app.Get("/ws/chat", liveChatPresentation.CanUpgradeToWebSocket,
 		websocket.New(liveChatPresentation.LiveChatWebSocket))
+
 }
 
 func main() {
