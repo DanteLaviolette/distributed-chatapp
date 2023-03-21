@@ -172,7 +172,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: redis
+    app: mongo
   ports:
   - name: tcp
     port: 27017

@@ -116,7 +116,9 @@ function Chat({ user, setUser, setUserCount }) {
     // Load initial chat page on load
     useEffect(() => {
         axios.get("/api/messages", { params: { lastTimestamp: Date.now() * constants.MS_TO_NS} }).then(res => {
-            updateMessages(res.data)
+            if (res.data && res.data.length > 0) {
+                updateMessages(res.data)
+            }
             setHasLoadedInitialPage(true);
         }).catch(() => {
             setErrorOccured(true)
