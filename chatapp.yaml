@@ -19,7 +19,7 @@ spec:
         image: harbor.pacslab.ca/215717002/backend:latest
         env:
         - name: MONGODB_URL
-          value: "mongodb://mongodb:27017"
+          value: "mongodb://mongo:27017"
         - name: REDIS_URL
           value: "redis:6379"
         - name: REDIS_PASSWORD
@@ -66,14 +66,14 @@ spec:
       - name: chatapp-frontend
         image: harbor.pacslab.ca/215717002/frontend:latest
         ports:
-        - containerPort: 30222
+        - containerPort: 80
         resources:
           requests:
             cpu: 100m
             memory: 64Mi
           limits:
             cpu: 200m
-            memory: 256Mi
+            memory: 512Mi
       restartPolicy: Always
       imagePullSecrets:
       - name: regcred
@@ -103,7 +103,7 @@ spec:
             memory: 64Mi
           limits:
             cpu: 200m
-            memory: 256Mi
+            memory: 512Mi
       restartPolicy: Always
       imagePullSecrets:
       - name: regcred
@@ -123,7 +123,7 @@ spec:
     spec:
       terminationGracePeriodSeconds: 5
       containers:
-      - name: redis
+      - name: mongo
         image: harbor.pacslab.ca/215717002/mongo:latest
         ports:
         - containerPort: 27017
@@ -133,7 +133,7 @@ spec:
             memory: 64Mi
           limits:
             cpu: 200m
-            memory: 256Mi
+            memory: 512Mi
       restartPolicy: Always
       imagePullSecrets:
       - name: regcred
@@ -148,8 +148,8 @@ spec:
     app: chatapp-frontend
   ports:
   - name: http
-    port: 30222
-    targetPort: 30222
+    port: 80
+    targetPort: 80
     nodePort: 30222
 ---
 apiVersion: v1
@@ -175,9 +175,8 @@ spec:
     app: redis
   ports:
   - name: tcp
-  - port: 27017
+    port: 27017
     targetPort: 27017
-    nodePort: 27017
 ---
 apiVersion: v1
 kind: Service
@@ -188,7 +187,7 @@ spec:
   selector:
     app: chatapp-backend
   ports:
-  - name: tcp
+  - name: http
     port: 8000
     targetPort: 8000
 ---

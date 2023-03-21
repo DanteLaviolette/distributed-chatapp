@@ -19,4 +19,4 @@ COPY --from=build /usr/src/frontend/dist/ ./
 COPY ./nginx/app.conf /etc/nginx/conf.d/default.conf
 
 # expose port
-EXPOSE 30222
+EXPOSE 80
