@@ -11,7 +11,7 @@ RUN go mod download && go build -o ./backend
 
 # set env vars
 ENV PORT=8000
-ENV GO_ENV production
+ENV GO_ENV="prod"
 # IRL our secrets would be provided by the executing env (ie. AWS)
 # although as we aren't hosting
 # the app, we'll store them in plaintext here :(
