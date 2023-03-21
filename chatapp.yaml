@@ -1,1 +1,194 @@
-This is a placeholder.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatapp-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatapp-backend
+  template:
+    metadata:
+      labels:
+        app: chatapp-backend
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: chatapp-backend
+        image: harbor.pacslab.ca/215717002/backend:latest
+        env:
+        - name: MONGODB_URL
+          value: "mongodb://mongodb:27017"
+        - name: REDIS_URL
+          value: "redis:6379"
+        - name: REDIS_PASSWORD
+          value: ""
+        - name: REDIS_DB
+          value: "0"
+        - name: REDIS_MESSAGING_CHANNEL
+          value: "messaging"
+        - name: REDIS_USER_COUNT_CHANNEL
+          value: "userCount"
+        - name: ANONYMOUS_USERS_REDIS_KEY
+          value: "anonymousUsers"
+        - name: AUTHORIZED_USERS_REDIS_KEY
+          value: "authorizedUsers"
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 400m
+            memory: 512Mi
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatapp-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatapp-frontend
+  template:
+    metadata:
+      labels:
+        app: chatapp-frontend
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: chatapp-frontend
+        image: harbor.pacslab.ca/215717002/frontend:latest
+        ports:
+        - containerPort: 30222
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: redis
+        image: harbor.pacslab.ca/215717002/redis:7.0.8-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: redis
+        image: harbor.pacslab.ca/215717002/mongo:latest
+        ports:
+        - containerPort: 27017
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatapp-frontend
+spec:
+  type: NodePort
+  selector:
+    app: chatapp-frontend
+  ports:
+  - name: http
+    port: 30222
+    targetPort: 30222
+    nodePort: 30222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - name: tcp
+    port: 6379
+    targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - name: tcp
+  - port: 27017
+    targetPort: 27017
+    nodePort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatapp-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: chatapp-backend
+  ports:
+  - name: tcp
+    port: 8000
+    targetPort: 8000
+---
