@@ -9,6 +9,7 @@ import MessageBar from "./MessageBar";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { CircularProgress, Typography } from "@mui/joy";
+import { SortedMessageList } from "../utils/SortedMessageList";
 
 let heartbeatInterval = null;
 
@@ -62,7 +63,7 @@ function Chat({ user, setUser, setUserCount }) {
     const [hasLoadedInitialPage, setHasLoadedInitialPage] = useState(false)
     const [errorOccured, setErrorOccured] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState(new SortedMessageList());
 
     // Used to ensure duplicate messages aren't added from paging
     const [messageIds, setMessageIds] = useState(new Set())
@@ -74,29 +75,34 @@ function Chat({ user, setUser, setUserCount }) {
     /**
      * Adds the messages to the messages & messageIds state ensuring no duplicates
      * as well as correct sort order
-     * @param {Array<String>} newMessages 
+     * @param {Array<String>} newMessages New messages to add
+     * @param {boolean} isNewMessage True if these messages are likely new
      */
-    function updateMessages(newMessages) {
+    function updateMessages(newMessages, isNewMessage = false) {
         const updatedMessageIds = new Set(messageIds)
         setMessages((messages) => {
-            // Create duplicate of message state
-            const res = [...messages]
             // Add all non-existent newMessages to res
             for (let i = 0; i < newMessages.length; i++) {
                 if (!updatedMessageIds.has(newMessages[i].id)) {
-                    res.push({
+                    const cleanedMessage = {
                         name: newMessages[i].name,
                         email: newMessages[i].email,
                         ts: newMessages[i].ts,
                         message: newMessages[i].message,
                         subject: newMessages[i].subject,
                         id: newMessages[i].id
-                    })
+                    }
+                    // Sorted-insertion w/ optimizations based on assumption
+                    // that messages are new or old
+                    if (isNewMessage) {
+                        messages.insertMessageAssumingNew(cleanedMessage)
+                    } else {
+                        messages.insertMessageAssumingOld(cleanedMessage)
+                    }
                     updatedMessageIds.add(newMessages[i].id)
                 }
             }
-            // Sort by timestamp & return res
-            return res.sort((a, b) => a.ts - b.ts)
+            return messages
         })
         // Update messageIds
         setMessageIds(updatedMessageIds)
@@ -178,7 +184,7 @@ function Chat({ user, setUser, setUserCount }) {
             toast.error("Failed to send message", constants.TOAST_CONFIG)
         } else if (msg.type === "message") {
             // Add message to state
-            updateMessages([msg])
+            updateMessages([msg], true)
         } else if (msg.type === "user_count") {
             setUserCount({
                 anonymousUsers: msg.anonymousUsers,

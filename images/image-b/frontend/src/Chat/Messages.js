@@ -52,8 +52,13 @@ function Messages({ messages, updateMessages }) {
                 && !isLoadingMessages && !loadedAllMessages) {
             // Set is loading
             setIsLoadingMessages(true)
-            // Get messages
-            const lastTimestamp = messages[0].ts
+            // Get oldest message timestamp
+            const oldestMessage = messages.getOldestMessage()
+            if (oldestMessage == null) {
+                return
+            }
+            const lastTimestamp = oldestMessage.ts
+            // Get older messages
             axios.get("/api/messages", { params: { lastTimestamp } }).then(res => {
                 // Handle case where all messages have been received
                 if (res.data === null || res.data.length === 0) {
@@ -70,15 +75,23 @@ function Messages({ messages, updateMessages }) {
         }
     }
 
+    const messagesToElements = () => {
+        let arr = []
+        let curr = messages.head
+        while (curr != null) {
+            arr.push( <Message key={curr.val.id} message={curr.val} />)
+            curr = curr.next
+        }
+        return arr
+    }
+
     return (
         <Box ref={messageBox} onScroll={handleScroll} height="100%" width="100%" sx={{ overflow: "auto", display: 'flex', flexDirection: 'column-reverse' }}>
             <Box ref={messageBoxChild}>
                 {(loadedAllMessages || isLoadingMessages) && <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Typography level="body3">{isLoadingMessages ? "Loading Previous Messages..." : "Loaded All Messages"}</Typography>
                     </Box>}
-                {messages.map((message, i) => {
-                    return <Message key={i} message={message} />
-                })}
+                {messagesToElements()}
             </Box>
         </Box>
     );
