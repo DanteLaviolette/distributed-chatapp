@@ -164,6 +164,8 @@ function Chat({ user, setUser, setUserCount }) {
         if (user) {
             sendAuthentication();
         }
+        // Initialize heartbeat
+        initializeHeartbeat(websocket)
     }
 
     // Main websocket message handler
@@ -198,13 +200,11 @@ function Chat({ user, setUser, setUserCount }) {
         if (websocket) {
             // If the websocket connects very fast, it will miss the onopen below
             // so we force initial connection handling in this case
-            if (isWebSocketOpen(websocket)) {
+            if (isWebSocketOpen(websocket) && !isConnected) {
                 handleOnConnect()
             }
             // Handle open
             websocket.onopen = handleOnConnect
-            // Initialize heartbeat
-            initializeHeartbeat(websocket)
             // handle message recipient
             websocket.onmessage = (event) => {
                 const msg = JSON.parse(event.data)
@@ -215,7 +215,7 @@ function Chat({ user, setUser, setUserCount }) {
             // Handle retry connection on close
             websocket.onclose = attemptReconnect
         }
-    }, [websocket])
+    }, [websocket, messages, messageIds, isConnected])
 
     // Send updated credentials on user change or restart session on logout
     useEffect(() => {
