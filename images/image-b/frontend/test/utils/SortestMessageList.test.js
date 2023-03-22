@@ -11,6 +11,7 @@ test('SortedMessageList correct sorted order (Only head inserts)', () => {
     list.insertMessageAssumingOld({ ts: 5 }) // New tail
     list.insertMessageAssumingOld({ ts: 2 }) // Middle insert
     expect(list.toArray()).toEqual(expected)
+    expect(list.getOldestMessage()).toEqual({ts: -5})
 });
 
 test('SortedMessageList correct sorted order (Only tail inserts)', () => {
@@ -22,6 +23,7 @@ test('SortedMessageList correct sorted order (Only tail inserts)', () => {
     list.insertMessageAssumingNew({ ts: 5 }) // New tail
     list.insertMessageAssumingNew({ ts: 2 }) // Middle insert
     expect(list.toArray()).toEqual(expected)
+    expect(list.getOldestMessage()).toEqual({ts: -5})
 });
 
 
@@ -42,4 +44,5 @@ test('SortedMessageList correct sorted order (both insert types)', () => {
     list.insertMessageAssumingOld({ ts: 50 }) // New tail -- from head
     list.insertMessageAssumingOld({ ts: -10 }) // New head -- from head
     expect(list.toArray()).toEqual(expected)
+    expect(list.getOldestMessage()).toEqual({ts: -10})
 });

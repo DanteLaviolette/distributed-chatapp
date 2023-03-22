@@ -27,7 +27,7 @@ export default class SortedMessageList {
         // Expose functions
         this.insertMessageAssumingOld = this.sortedInsertionFromHead
         this.insertMessageAssumingNew = this.sortedInsertionFromTail
-        this.getOldestMessage = () => this.tail.val
+        this.getOldestMessage = () => this.head.val
     }
 
     insertValueBeforeNode(val, listNode) {
