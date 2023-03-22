@@ -96,21 +96,23 @@ func HandleChatMessage(authCtx *structs.AuthContext, subject string, content str
 				Ts:      ts.UnixNano(),
 			},
 		}
-		// Write message to DB
-		id, err := persistence.WriteMessage(message.MessageSchema)
-		if err != nil {
-			// Notify user of failed message
-			notifyFailure(authCtx)
-			log.Print(err)
-			return
-		}
-		message.ID = id
-		// Publish message to all servers
-		err = messaging.PublishMessage(message)
-		if err != nil {
-			// Notify user of failed message
-			notifyFailure(authCtx)
-		}
+		// Send message in sub-routine so we don't block the sockets thread
+		go func() {
+			// Write message to DB -- ensures consistency on new page loads
+			_, err := persistence.WriteMessage(message.MessageSchema)
+			if err != nil {
+				// Notify user of failed message
+				notifyFailure(authCtx)
+				log.Print(err)
+				return
+			}
+			// Publish message to all servers
+			err = messaging.PublishMessage(message)
+			if err != nil {
+				// Notify user of failed message
+				notifyFailure(authCtx)
+			}
+		}()
 	} else {
 		// Notify user of failed message
 		notifyFailure(authCtx)
