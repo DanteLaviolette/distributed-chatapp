@@ -20,19 +20,24 @@ class MessageNode {
  * - In these cases insertion will be O(n), although this will be closer
  * to O(1) in practice.
  */
-export class SortedMessageList {
+class SortedMessageList {
     constructor() {
         this.head = null // oldest message
         this.tail = null // newest message
         // Expose functions
-        this.insertMessageAssumingNew = this.sortedInsertionFromHead
-        this.insertMessageAssumingOld = this.sortedInsertionFromTail
+        this.insertMessageAssumingOld = this.sortedInsertionFromHead
+        this.insertMessageAssumingNew = this.sortedInsertionFromTail
         this.getOldestMessage = () => this.tail.val
     }
 
     insertValueBeforeNode(val, listNode) {
+        let originalPreviousNode = listNode.prev
         // Insert before node
         listNode.prev = new MessageNode(val, listNode.prev, listNode)
+        // Update original previous nodes next
+        if (originalPreviousNode) {
+            originalPreviousNode.next = listNode.prev
+        }
         // Handle head case
         if (listNode === this.head) {
             this.head = listNode.prev
@@ -40,8 +45,13 @@ export class SortedMessageList {
     }
 
     insertValueAfterNode(val, listNode) {
+        let originalNextNode = listNode.next
         // Insert after node
         listNode.next = new MessageNode(val, listNode, listNode.next)
+        // Update original next nodes prev
+        if (originalNextNode) {
+            originalNextNode.prev = listNode.next
+        }
         // Handle tail case
         if (listNode === this.tail) {
             this.tail = listNode.next
@@ -50,7 +60,7 @@ export class SortedMessageList {
 
     /**
      * Inserts the val in sorted order (by val.ts). Begins iteration at the
-     * head for faster inserts of olds messages.
+     * head for faster inserts of old messages.
      * @param {message} val 
      * @returns None
      */
@@ -115,4 +125,8 @@ export class SortedMessageList {
         }
         return res
     }
+}
+
+module.exports = {
+    SortedMessageList
 }
