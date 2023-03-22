@@ -9,7 +9,7 @@ import MessageBar from "./MessageBar";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { CircularProgress, Typography } from "@mui/joy";
-import { SortedMessageList } from "../utils/SortedMessageList";
+import SortedMessageList from "../utils/SortedMessageList";
 
 let heartbeatInterval = null;
 

@@ -20,7 +20,7 @@ class MessageNode {
  * - In these cases insertion will be O(n), although this will be closer
  * to O(1) in practice.
  */
-class SortedMessageList {
+export default class SortedMessageList {
     constructor() {
         this.head = null // oldest message
         this.tail = null // newest message
@@ -125,8 +125,4 @@ class SortedMessageList {
         }
         return res
     }
-}
-
-module.exports = {
-    SortedMessageList
 }
