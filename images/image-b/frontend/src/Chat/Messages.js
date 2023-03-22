@@ -1,10 +1,11 @@
 import { Box, Tooltip, Typography } from "@mui/joy";
 import axios from "axios";
 import PropTypes from 'prop-types';
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import useMeasure from 'react-use-measure'
+import InfiniteScroll from 'react-infinite-scroll-component';
 import constants from "../constants";
+import SortedMessageList from "../utils/SortedMessageList";
 
 const messagePropType = PropTypes.shape({
     name: PropTypes.string,
@@ -15,7 +16,7 @@ const messagePropType = PropTypes.shape({
 })
 
 Messages.propTypes = {
-    messages: PropTypes.arrayOf(messagePropType),
+    messages: PropTypes.instanceOf(SortedMessageList),
     updateMessages: PropTypes.func
 }
 
@@ -23,58 +24,35 @@ Message.propTypes = {
     message: messagePropType
 }
 
-// Displays all of the given messages
+// Displays all of the given messages using paging
 function Messages({ messages, updateMessages }) {
-    const [isLoadingMessages, setIsLoadingMessages] = useState(false)
     const [loadedAllMessages, setLoadedAllMessages] = useState(false)
 
-    const messageBox = useRef()
-    const [messageBoxChild, bounds] = useMeasure()
-    const [previousMessageBoxChildHeight, setPreviousMessageBoxChildHeight] = useState(null)
+    const messageBoxId = "messageBox"
 
-    // Persist scroll position on messages added
-    useEffect(() => {
-        if (messageBox.current && bounds && previousMessageBoxChildHeight) {
-            // Move scroll to previous position
-            messageBox.current.scrollTop += (bounds.height - previousMessageBoxChildHeight)
-            setIsLoadingMessages(false);
+    // Load the next page of messages
+    function loadMoreMessages() {
+        // Get oldest message timestamp
+        const oldestMessage = messages.getOldestMessage()
+        if (oldestMessage == null) {
+            return
         }
-        // Keep track of previous height
-        if (bounds) {
-            setPreviousMessageBoxChildHeight(bounds.height)
-        }
-    }, [bounds, previousMessageBoxChildHeight])
-
-    function handleScroll(ev) {
-        // When the user scrolls to the top load more messages if some
-        // are available and we aren't already loading them
-        if (ev.target.children[0].getBoundingClientRect().y === constants.TOP_BAR_HEIGHT
-                && !isLoadingMessages && !loadedAllMessages) {
-            // Set is loading
-            setIsLoadingMessages(true)
-            // Get oldest message timestamp
-            const oldestMessage = messages.getOldestMessage()
-            if (oldestMessage == null) {
-                return
+        const lastTimestamp = oldestMessage.ts
+        // Get older messages
+        axios.get("/api/messages", { params: { lastTimestamp } }).then(res => {
+            // Handle case where all messages have been received
+            if (res.data === null || res.data.length === 0) {
+                setLoadedAllMessages(true)
+            } else {
+                // Store messages in chat
+                updateMessages(res.data)
             }
-            const lastTimestamp = oldestMessage.ts
-            // Get older messages
-            axios.get("/api/messages", { params: { lastTimestamp } }).then(res => {
-                // Handle case where all messages have been received
-                if (res.data === null || res.data.length === 0) {
-                    setLoadedAllMessages(true)
-                    setIsLoadingMessages(false)
-                } else {
-                    // Store messages in chat
-                    updateMessages(res.data)
-                }
-            }).catch(() => {
-                toast.error("Failed to load previous messages. Try again later.", constants.TOAST_CONFIG)
-                setIsLoadingMessages(false);
-            });
-        }
+        }).catch(() => {
+            toast.error("Failed to load previous messages. Try again later.", constants.TOAST_CONFIG)
+        });
     }
 
+    // Convert messages linked list to array of elements
     const messagesToElements = () => {
         let arr = []
         let curr = messages.head
@@ -86,13 +64,17 @@ function Messages({ messages, updateMessages }) {
     }
 
     return (
-        <Box ref={messageBox} onScroll={handleScroll} height="100%" width="100%" sx={{ overflow: "auto", display: 'flex', flexDirection: 'column-reverse' }}>
-            <Box ref={messageBoxChild}>
-                {(loadedAllMessages || isLoadingMessages) && <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Typography level="body3">{isLoadingMessages ? "Loading Previous Messages..." : "Loaded All Messages"}</Typography>
-                    </Box>}
+        <Box id={messageBoxId} height="100%" width="100%" sx={{ overflow: "auto", display: 'flex', flexDirection: 'column-reverse' }}>
+            <InfiniteScroll
+                dataLength={messages.length}
+                next={loadMoreMessages}
+                scrollableTarget={messageBoxId}
+                inverse={true}
+                hasMore={!loadedAllMessages}
+                loader={<Typography level="body3">Loading messages...</Typography>}
+            >
                 {messagesToElements()}
-            </Box>
+            </InfiniteScroll>
         </Box>
     );
 }

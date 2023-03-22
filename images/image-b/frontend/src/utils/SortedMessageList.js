@@ -24,6 +24,7 @@ export default class SortedMessageList {
     constructor() {
         this.head = null // oldest message
         this.tail = null // newest message
+        this.length = 0
         // Expose functions
         this.insertMessageAssumingOld = this.sortedInsertionFromHead
         this.insertMessageAssumingNew = this.sortedInsertionFromTail
@@ -65,6 +66,7 @@ export default class SortedMessageList {
      * @returns None
      */
     sortedInsertionFromHead(val) {
+        this.length += 1
         // First element edge case
         if (this.head == null) {
             this.head = new MessageNode(val, null, null)
@@ -92,6 +94,7 @@ export default class SortedMessageList {
      * @returns None
      */
     sortedInsertionFromTail(val) {
+        this.length += 1
         // First element edge case
         if (this.tail == null) {
             this.tail = new MessageNode(val, null, null)

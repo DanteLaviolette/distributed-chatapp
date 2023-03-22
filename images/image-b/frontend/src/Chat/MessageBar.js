@@ -28,7 +28,6 @@ function MessageBar({ sendMessage, isLoggedIn }) {
         onChange={e => setSubject(e.target.value)}
         placeholder={"Subject"}
         readOnly={!isLoggedIn}
-        inputProps={{ maxLength: 12 }}
         onFocus={() => {
             // Enable focus styling of outer input on focus
             messageInput.current.classList.add("Joy-focused")
