@@ -25,7 +25,8 @@ test('SortedMessageList correct sorted order (Only tail inserts)', () => {
 
 
 test('SortedMessageList correct sorted order (both insert types)', () => {
-    const expected = [{ ts: -10 }, { ts: -5 }, { ts: -2 }, { ts: 0 }, { ts: 2 }, { ts: 2 }, { ts: 15 }, { ts: 15 }, { ts: 18 }, { ts: 50 }
+    const expected = [{ ts: -10 }, { ts: -5 }, { ts: -2 }, { ts: 0 },
+        { ts: 2 }, { ts: 2 }, { ts: 15 }, { ts: 15 }, { ts: 18 }, { ts: 50 }
     ]
     // Tests all possible state changes on both head & tail
     let list = new SortedMessageList()
