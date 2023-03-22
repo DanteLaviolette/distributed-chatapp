@@ -8,7 +8,7 @@ import { useState } from "react";
 import Cookies from "js-cookie";
 import { Stack } from "@mui/system";
 import constants from "../constants";
-import { validatePassword } from "../utils/utils";
+import { deleteAuthJWT, validatePassword } from "../utils/utils";
 import authorizedAxios from "../utils/AuthInterceptor";
 
 ProfileMenu.propTypes = {
@@ -47,11 +47,12 @@ function ProfileMenu(props) {
         authorizedAxios.post('/api/logout').then((res) => {
             // Set user to null & close popup
             props.setUser(null)
+            deleteAuthJWT()
             closePopup()
         }).catch((err) => {
             // Error occurred, manually logout
-            Cookies.remove("auth")
             Cookies.remove("refresh")
+            deleteAuthJWT()
             props.setUser(null)
             closePopup()
         })
