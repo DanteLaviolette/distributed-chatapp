@@ -48,6 +48,10 @@ func exposeEndpoints(app *fiber.App) {
 	// Chat websocket endpoint (populate w/ auth info if possible)
 	app.Get("/ws/chat", liveChatPresentation.CanUpgradeToWebSocket,
 		websocket.New(liveChatPresentation.LiveChatWebSocket))
+	// Health check
+	app.Get("/api/health", func(c *fiber.Ctx) error {
+		return c.SendStatus(200)
+	})
 
 }
 
