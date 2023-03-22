@@ -15,7 +15,6 @@ import (
 	"go.violettedev.com/eecs4222/shared/database/schema"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -49,9 +48,9 @@ Returns auth info if its valid.
 Error "refresh" means the token is expired.
 Returns: (id, name, email, error)
 */
-func (provider *AuthProvider) GetAuthContextWebSocket(c *websocket.Conn,
-	authToken string) (string, string, string, error) {
-	auth, err := getAuthContextWebSocket(c, authToken, provider.authPrivateKey)
+func (provider *AuthProvider) GetAuthContextWebSocket(authToken string) (string,
+	string, string, error) {
+	auth, err := getAuthContextWebSocket(authToken, provider.authPrivateKey)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -141,7 +140,7 @@ func InvalidateCredentials(c *fiber.Ctx) {
 Returns auth info, or error if there is no (or invalid) auth info.
 Error "refresh" means the token is expired.
 */
-func getAuthContextWebSocket(c *websocket.Conn, authTokenString string,
+func getAuthContextWebSocket(authTokenString string,
 	authPrivateKey string) (*structs.AuthTokenClaim, error) {
 	authToken, err := auth_token.ParseAuthToken(authTokenString, authPrivateKey)
 	if errors.Is(err, jwt.ErrTokenExpired) {

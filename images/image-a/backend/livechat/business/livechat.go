@@ -51,10 +51,10 @@ Handle authentication method:
 - return "refresh" message if credentials are expired
 - do nothing if not signed in
 */
-func HandleAuthMessage(c *websocket.Conn, authCtx *structs.AuthContext, content string) {
+func HandleAuthMessage(authCtx *structs.AuthContext, content string) {
 	authProvider := auth.Initialize(os.Getenv("AUTH_PRIVATE_KEY"),
 		os.Getenv("REFRESH_PRIVATE_KEY"))
-	userId, name, email, err := authProvider.GetAuthContextWebSocket(c, content)
+	userId, name, email, err := authProvider.GetAuthContextWebSocket(content)
 	if err != nil && err.Error() == "refresh" {
 		// Request refresh
 		coordination.WriteMessage(authCtx.SocketId, structs.Message{

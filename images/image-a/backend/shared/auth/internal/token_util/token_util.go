@@ -21,6 +21,10 @@ func ParseJWT(tokenString string, claim jwt.Claims, privateKey string) (jwt.Clai
 		// Return private key
 		return []byte(privateKey), nil
 	})
+	// Return error if parsing failed
+	if token == nil {
+		return nil, err
+	}
 	// Return error if invalid
 	if err != nil || !token.Valid {
 		return token.Claims, err
