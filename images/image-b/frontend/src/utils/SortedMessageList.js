@@ -27,7 +27,6 @@ export class SortedMessageList {
         // Expose functions
         this.insertMessageAssumingNew = this.sortedInsertionFromHead
         this.insertMessageAssumingOld = this.sortedInsertionFromTail
-        this.toArray = this.toArray
         this.getOldestMessage = () => this.tail.val
     }
 
