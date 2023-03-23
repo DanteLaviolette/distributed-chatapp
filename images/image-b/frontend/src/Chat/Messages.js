@@ -71,7 +71,12 @@ function Messages({ messages, updateMessages }) {
                 scrollableTarget={messageBoxId}
                 inverse={true}
                 hasMore={!loadedAllMessages}
-                loader={<Typography level="body3">Loading messages...</Typography>}
+                loader={
+                <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                <Typography level="body3">
+                    {messages.length === 0 && "No messages. Start the conversation 👋"}
+                    {messages.length > 0 && "Loading messages..."}
+                    </Typography></Box>}
             >
                 {messagesToElements()}
             </InfiniteScroll>
