@@ -81,7 +81,7 @@ function Chat({ user, setUser, setUserCount }) {
     // Setup websocket & worker on page load
     useEffect(() => {
         // Handle message worker
-        const newWorker = new window.Worker('/message-sort-worker.js', { type: "module" })
+        const newWorker = new window.Worker('/MessageSortWorker.js', { type: "module" })
         setWorker(newWorker);
         // handle websocket
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
