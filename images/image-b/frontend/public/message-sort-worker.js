@@ -8,21 +8,24 @@ const messageIds = new Set()
 
 let messagesChanged = false;
 
-// Send updated messages every 200 ms if needed
-// This is to avoid blocking the UI with renders if there is a very high
-// message throughput
-setInterval(() => {
+// Send update messages to whoever is listing (ie. UI)
+const sendUpdatedMessages = () => {
     if (messagesChanged) {
         messagesChanged = false;
         postMessage({
             messages: messages.toArray()
         });
     }
-}, 200);
+}
+
+// Send updated messages every 200 ms if needed
+// This is to avoid blocking the UI with renders if there is a very high
+// message throughput
+setInterval(sendUpdatedMessages, 200);
 
 onmessage = (e) => {
     // Get event data
-    const { newMessages, isNewMessage } = e.data;
+    const { newMessages, isNewMessage, instantUpdate } = e.data;
     // Add all non-existent newMessages to res
     for (let i = 0; i < newMessages.length; i++) {
         if (!messageIds.has(newMessages[i].id)) {
@@ -45,4 +48,7 @@ onmessage = (e) => {
         }
     }
     messagesChanged = true;
+    if (instantUpdate) {
+        sendUpdatedMessages()
+    }
 }

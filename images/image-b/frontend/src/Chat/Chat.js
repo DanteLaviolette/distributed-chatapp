@@ -71,9 +71,12 @@ function Chat({ user, setUser, setUserCount }) {
      * as well as correct sort order -- using worker
      * @param {Array<String>} newMessages New messages to add
      * @param {boolean} isNewMessage True if these messages are likely new
+     * @param {boolean} instantUpdate True if messages should be pushed to UI
+     * right after processing. Otherwise, enqueues them to be pushed to UI at
+     * some interval.
      */
-    function updateMessages(newMessages, isNewMessage = false) {
-        worker.postMessage({ newMessages, isNewMessage })
+    function updateMessages(newMessages, isNewMessage, instantUpdate) {
+        worker.postMessage({ newMessages, isNewMessage, instantUpdate })
     }
     // Setup websocket & worker on page load
     useEffect(() => {
@@ -99,7 +102,7 @@ function Chat({ user, setUser, setUserCount }) {
         if (worker) {
             axios.get("/api/messages", { params: { lastTimestamp: Date.now() * constants.MS_TO_NS} }).then(res => {
                 if (res.data && res.data.length > 0) {
-                    updateMessages(res.data)
+                    updateMessages(res.data, false, true)
                 }
                 setHasLoadedInitialPage(true);
             }).catch(() => {
@@ -162,8 +165,8 @@ function Chat({ user, setUser, setUserCount }) {
             // Notify of failed message
             toast.error("Failed to send message", constants.TOAST_CONFIG)
         } else if (msg.type === "message") {
-            // Add message to state
-            updateMessages([msg], true)
+            // Add message to state -- update instantly if from curr user
+            updateMessages([msg], true, user && user.data.email === msg.email)
         } else if (msg.type === "user_count") {
             setUserCount({
                 anonymousUsers: msg.anonymousUsers,

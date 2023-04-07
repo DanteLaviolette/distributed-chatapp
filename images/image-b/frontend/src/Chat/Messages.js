@@ -6,21 +6,17 @@ import { toast } from "react-toastify";
 import InfiniteScroll from 'react-infinite-scroll-component';
 import constants from "../constants";
 
-const messagePropType = PropTypes.shape({
-    name: PropTypes.string,
-    email: PropTypes.string,
-    message: PropTypes.string,
-    subject: PropTypes.string,
-    ts: PropTypes.number
-})
-
 Messages.propTypes = {
     worker: PropTypes.instanceOf(window.Worker),
     updateMessages: PropTypes.func
 }
 
 Message.propTypes = {
-    message: messagePropType
+    name: PropTypes.string,
+    email: PropTypes.string,
+    message: PropTypes.string,
+    subject: PropTypes.string,
+    timestamp: PropTypes.number
 }
 
 const MemoMessage = memo(Message)
@@ -55,7 +51,7 @@ function Messages({ updateMessages, worker }) {
                 setLoadedAllMessages(true)
             } else {
                 // Store messages in chat
-                updateMessages(res.data)
+                updateMessages(res.data, false, true)
             }
         }).catch(() => {
             toast.error("Failed to load previous messages. Try again later.", constants.TOAST_CONFIG)
