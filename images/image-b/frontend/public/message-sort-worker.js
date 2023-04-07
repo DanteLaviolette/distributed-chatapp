@@ -6,6 +6,20 @@ const messages = new SortedMessageList()
 // Used to ensure duplicate messages aren't added from paging
 const messageIds = new Set()
 
+let messagesChanged = false;
+
+// Send updated messages every 200 ms if needed
+// This is to avoid blocking the UI with renders if there is a very high
+// message throughput
+setInterval(() => {
+    if (messagesChanged) {
+        messagesChanged = false;
+        postMessage({
+            messages: messages.toArray()
+        });
+    }
+}, 200);
+
 onmessage = (e) => {
     // Get event data
     const { newMessages, isNewMessage } = e.data;
@@ -30,7 +44,5 @@ onmessage = (e) => {
             messageIds.add(newMessages[i].id)
         }
     }
-    postMessage({
-        messages: messages.toArray()
-    });
+    messagesChanged = true;
 }

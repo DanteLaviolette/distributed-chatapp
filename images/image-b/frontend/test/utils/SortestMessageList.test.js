@@ -1,5 +1,4 @@
-//const SortedMessageList = require("../../src/utils/SortedMessageList");
-import SortedMessageList from "../../src/utils/SortedMessageList"
+import SortedMessageList from "../../public/SortedMessageList"
 
 
 test('SortedMessageList correct sorted order (Only head inserts)', () => {
