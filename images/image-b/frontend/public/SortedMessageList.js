@@ -1,4 +1,3 @@
-
 class MessageNode {
     constructor(val, prev, next) {
         this.val = val

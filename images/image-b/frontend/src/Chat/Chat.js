@@ -9,7 +9,6 @@ import MessageBar from "./MessageBar";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { CircularProgress, Typography } from "@mui/joy";
-import SortedMessageList from "../utils/SortedMessageList";
 
 let heartbeatInterval = null;
 
@@ -63,52 +62,25 @@ function Chat({ user, setUser, setUserCount }) {
     const [hasLoadedInitialPage, setHasLoadedInitialPage] = useState(false)
     const [errorOccured, setErrorOccured] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [messages, setMessages] = useState(new SortedMessageList());
 
-    // Used to ensure duplicate messages aren't added from paging
-    const [messageIds, setMessageIds] = useState(new Set())
-
-    // TODO: Show status of connection (green or red bubble somewhere)
-    // TODO: Load paging on scroll to top of page -- should show loading sign
-    // TODO: Should also show "end of chat history" message once the top is reached
+    // Handle sorting in background
+    const [worker, setWorker] = useState(null);
 
     /**
-     * Adds the messages to the messages & messageIds state ensuring no duplicates
-     * as well as correct sort order
+     * Adds the messages to the messages ensuring no duplicates
+     * as well as correct sort order -- using worker
      * @param {Array<String>} newMessages New messages to add
      * @param {boolean} isNewMessage True if these messages are likely new
      */
     function updateMessages(newMessages, isNewMessage = false) {
-        const updatedMessageIds = new Set(messageIds)
-        setMessages((messages) => {
-            // Add all non-existent newMessages to res
-            for (let i = 0; i < newMessages.length; i++) {
-                if (!updatedMessageIds.has(newMessages[i].id)) {
-                    const cleanedMessage = {
-                        name: newMessages[i].name,
-                        email: newMessages[i].email,
-                        ts: newMessages[i].ts,
-                        message: newMessages[i].message,
-                        subject: newMessages[i].subject,
-                        id: newMessages[i].id
-                    }
-                    // Sorted-insertion w/ optimizations based on assumption
-                    // that messages are new or old
-                    if (isNewMessage) {
-                        messages.insertMessageAssumingNew(cleanedMessage)
-                    } else {
-                        messages.insertMessageAssumingOld(cleanedMessage)
-                    }
-                    updatedMessageIds.add(newMessages[i].id)
-                }
-            }
-            return messages
-        })
-        // Update messageIds
-        setMessageIds(updatedMessageIds)
+        worker.postMessage({ newMessages, isNewMessage })
     }
-    // Setup websocket on page load
+    // Setup websocket & worker on page load
     useEffect(() => {
+        // Handle message worker
+        const newWorker = new window.Worker('/message-sort-worker.js', { type: "module" })
+        setWorker(newWorker);
+        // handle websocket
         setWebSocket(new WebSocket(generateRelativeWebSocketPath("/ws/chat")));
         // On teardown, close connection & clear heartbeat interval
         return () => {
@@ -116,20 +88,25 @@ function Chat({ user, setUser, setUserCount }) {
             if (websocket) {
                 websocket.close()
             }
+            if (worker) {
+                worker.terminate()
+            }
         }
     }, [])
 
-    // Load initial chat page on load
+    // Load initial chat page on load -- ie. when worker is set
     useEffect(() => {
-        axios.get("/api/messages", { params: { lastTimestamp: Date.now() * constants.MS_TO_NS} }).then(res => {
-            if (res.data && res.data.length > 0) {
-                updateMessages(res.data)
-            }
-            setHasLoadedInitialPage(true);
-        }).catch(() => {
-            setErrorOccured(true)
-        })
-    }, [])
+        if (worker) {
+            axios.get("/api/messages", { params: { lastTimestamp: Date.now() * constants.MS_TO_NS} }).then(res => {
+                if (res.data && res.data.length > 0) {
+                    updateMessages(res.data)
+                }
+                setHasLoadedInitialPage(true);
+            }).catch(() => {
+                setErrorOccured(true)
+            })
+        }
+    }, [worker])
 
     const resetWebSocketValues = () => {
         setIsLoggedIn(false)
@@ -215,7 +192,7 @@ function Chat({ user, setUser, setUserCount }) {
             // Handle retry connection on close
             websocket.onclose = attemptReconnect
         }
-    }, [websocket, messages, messageIds, isConnected])
+    }, [websocket, isConnected])
 
     // Send updated credentials on user change or restart session on logout
     useEffect(() => {
@@ -230,7 +207,7 @@ function Chat({ user, setUser, setUserCount }) {
 
     // Display chat screen, error or loading message depending on state
     let chatScreen = <>
-        <Messages messages={messages} updateMessages={updateMessages} />
+        <Messages worker={worker} updateMessages={updateMessages} />
         <MessageBar isLoggedIn={isLoggedIn} sendMessage={sendMessage}/>
         </>
     if (errorOccured) {
