@@ -16,7 +16,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: chatapp-backend
-        image: harbor.pacslab.ca/215717002/image-a:latest
+        image: harbor.pacslab.ca/215717002/backend:latest
         env:
         - name: MONGODB_URL
           value: "mongodb://mongo:27017"
@@ -84,7 +84,7 @@ spec:
       terminationGracePeriodSeconds: 5
       containers:
       - name: chatapp-frontend
-        image: harbor.pacslab.ca/215717002/image-b:latest
+        image: harbor.pacslab.ca/215717002/frontend:latest
         ports:
         - containerPort: 80
         resources:
