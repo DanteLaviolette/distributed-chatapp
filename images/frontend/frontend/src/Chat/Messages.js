@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/joy";
 import axios from "axios";
 import PropTypes from 'prop-types';
-import { memo, useEffect, useState } from "react";
+import { memo, startTransition, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import InfiniteScroll from 'react-infinite-scroll-component';
 import constants from "../constants";
@@ -29,7 +29,10 @@ function Messages({ updateMessages, worker }) {
     useEffect(() => {
         if (worker) {
             worker.onmessage = (e) => {
-                setMessages(e.data.messages)
+                // Update messages state w/o blocking UI
+                startTransition(() => {
+                    setMessages(e.data.messages)
+                })
             };
         }
     });
@@ -51,7 +54,7 @@ function Messages({ updateMessages, worker }) {
                 setLoadedAllMessages(true)
             } else {
                 // Store messages in chat
-                updateMessages(res.data, false, true)
+                updateMessages(res.data)
             }
         }).catch(() => {
             toast.error("Failed to load previous messages. Try again later.", constants.TOAST_CONFIG)
