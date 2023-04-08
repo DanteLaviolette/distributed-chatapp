@@ -29,18 +29,13 @@ const Popup = styled(PopperUnstyled)({
 /*
 Button displaying users name, that shows a menu allowing them to logout
 or change their password.
-Note: I created the same thing for another project, so popup jsx
-is basically the same as:
+Note: I didn't reference my other project, but I basically created the same
+component before:
 - https://github.com/EECS4481Project/frontend/blob/main/src/agent/dashboard/Dashboard.js
 */
 function ProfileMenu(props) {
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
     const [anchorEl, setAnchorEl] = useState(null);
-    const open = Boolean(anchorEl)
-
-    const closePopup = () => {
-        setAnchorEl(null)
-    }
 
     const handleLogout = () => {
         // Post to login endpoint
@@ -48,13 +43,13 @@ function ProfileMenu(props) {
             // Set user to null & close popup
             props.setUser(null)
             deleteAuthJWT()
-            closePopup()
+            setAnchorEl(null)
         }).catch((err) => {
             // Error occurred, manually logout
             Cookies.remove("refresh")
             deleteAuthJWT()
             props.setUser(null)
-            closePopup()
+            setAnchorEl(null)
         })
     }
 
@@ -64,8 +59,8 @@ function ProfileMenu(props) {
                 <Typography level="body1">{props.user.data.name}</Typography>
                 <MoreVertIcon />
             </Button>
-            <Popup open={open} anchorEl={anchorEl} disablePortal>
-                <ClickAwayListener onClickAway={closePopup}>
+            <Popup open={Boolean(anchorEl)} anchorEl={anchorEl} disablePortal>
+                <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
                     <MenuList variant="outlined">
                         <MenuItem onClick={() => setIsChangePasswordOpen(true)}>Change Password</MenuItem>
                         <MenuItem onClick={handleLogout}>Logout</MenuItem>
@@ -82,28 +77,21 @@ Modal that displays a form allowing the user to change their password.
 */
 function ChangePasswordModal(props) {
     const [isLoading, setIsLoading] = useState(false)
-
     const [errorMessage, setErrorMessage] = useState("")
-
     // Form values
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
-
 
     const changePassword = () => {
         setErrorMessage("")
         // Ensure password is valid
         if (password !== confirmPassword) {
-            setErrorMessage("Passwords not equal")
-            return
+            return setErrorMessage("Passwords not equal")
         } else if (!validatePassword(password)) {
-            setErrorMessage("Passwords must be 8 characters")
-            return
+            return setErrorMessage("Passwords must be 8 characters")
         }
         setIsLoading(true)
-        authorizedAxios.post('/api/change_password', {
-            password
-        }).then(res => {
+        authorizedAxios.post('/api/change_password', { password }).then(res => {
             // Success -- close modal
             props.setIsModalOpen(false)
         }).catch(err => {
@@ -119,12 +107,9 @@ function ChangePasswordModal(props) {
         })
     }
 
-
     return <div>
         <Modal open={props.isModalOpen} onClose={() => props.setIsModalOpen(false)}>
-            <ModalDialog
-                sx={{ maxWidth: 500, minHeight: 'fit-content', overflow: 'scroll' }}
-            >
+            <ModalDialog sx={{ maxWidth: 500, minHeight: 'fit-content', overflow: 'scroll' }}>
                 <Typography level="h5">
                     Change Password
                 </Typography>

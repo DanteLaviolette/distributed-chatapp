@@ -1,6 +1,6 @@
 /*
-This is a common pattern I use for auth, so code is basically the same as
-another project I created:
+This is a common pattern I use for auth, so while I wrote this w/o reference
+to my other code, it's basically the same as another project I created:
 - https://github.com/EECS4481Project/frontend/blob/main/src/auth/RequestInterceptor.js
 */
 import axios from 'axios';
